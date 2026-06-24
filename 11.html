@@ -2084,5 +2084,37 @@ initCarTabs();loadLearnedAliases();loadApi();loadSavedTemplate();
 if('serviceWorker' in navigator){
 	navigator.serviceWorker.register('sw.js').catch(function(){});
 }
+	</script>
+<script>
+/* ===== PWA 文件接收：分享 + Launch Queue ===== */
+// 通过文件管理器“分享”到本 App 时接收文件
+if('launchQueue' in window){
+	launchQueue.setConsumer(async function(params){
+		if(params.files&&params.files.length>0){
+			var f=await params.files[0].getFile();
+			var n=f.name.toLowerCase();
+			if(n.endsWith('.xlsx')||n.endsWith('.xls')){
+				loadTemplate({target:{files:[f]}});
+				alert('已接收模板：'+f.name);
+			}else if(f.type.startsWith('image/')){
+				onImage({target:{files:[f]}});
+				alert('已接收图片，可进行OCR识别');
+			}else if(n.endsWith('.json')){
+				importLearned({target:{files:[f]}});
+				alert('已接收别名文件：'+f.name);
+			}else{
+				alert('不支持的文件类型：'+f.name);
+			}
+		}
+	});
+}
+// 诊断：验证按钮是否能触达
+var _diagDone=false;
+function _diag(msg){
+	if(_diagDone)return;_diagDone=true;
+	var s=document.getElementById('templateStatus');
+	if(s)s.innerHTML='<span class="badge badge-yellow">'+msg+'</span>';
+}
+if(!window.showOpenFilePicker)_diag('当前浏览器不支持文件选择API，请通过文件管理器"分享"到本App');
 </script>
 </body></html>

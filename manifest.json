@@ -7,6 +7,26 @@
   "orientation": "portrait",
   "background_color": "#080c14",
   "theme_color": "#00d4ff",
+  "launch_handler": {"client_mode": "auto"},
+  "share_target": {
+    "action": "./11.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{"name": "file", "accept": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel","image/*","application/json"]}]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "./11.html",
+      "accept": {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+        "application/vnd.ms-excel": [".xls"],
+        "image/*": [".jpg",".jpeg",".png"],
+        "application/json": [".json"]
+      }
+    }
+  ],
   "icons": [
     {
       "src": "icon-192.png",

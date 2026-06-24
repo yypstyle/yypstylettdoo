@@ -1,5 +1,5 @@
 /* ===== 报关初稿生成器 v6.4 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.4-v5';
+const CACHE_NAME = 'customs-v6.4-v6';
 
 const PRECACHE_URLS = [
   './11.html',
@@ -33,8 +33,20 @@ self.addEventListener('activate', event => {
   );
 });
 
-/* ----- fetch: Stale-While-Revalidate ----- */
+/* ----- fetch: Stale-While-Revalidate + Share Target ----- */
 self.addEventListener('fetch', event => {
+  // 处理分享目标 POST 请求（文件管理器 → 分享到 PWA）
+  if (event.request.method === 'POST' && event.request.url.includes('/11.html')) {
+    event.respondWith(
+      (async () => {
+        // 将 POST 重定向到 GET，文件由 LaunchQueue 传递
+        const url = new URL(event.request.url);
+        return Response.redirect(url.pathname, 303);
+      })()
+    );
+    return;
+  }
+
   // 只处理 GET 请求
   if (event.request.method !== 'GET') return;
 
