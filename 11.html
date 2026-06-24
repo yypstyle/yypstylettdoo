@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>报关初稿生成器 v6.4</title>
+<style>
+/* ===== 科技高级感暗色主题 ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;--bg-alt:#0d1321;
+  --surface:rgba(16,23,42,.85);--surface-solid:#10172a;
+  --border:rgba(0,212,255,.12);--border-glow:rgba(0,212,255,.25);
+  --text:#e0e6f0;--text-sec:#8899b4;--text-tri:#556680;
+  --cyan:#00d4ff;--cyan-light:rgba(0,212,255,.15);--cyan-dark:#0098ba;
+  --cyan-glow:0 0 20px rgba(0,212,255,.25),0 0 60px rgba(0,212,255,.08);
+  --blue:#6366f1;--blue-light:rgba(99,102,241,.15);--blue-dark:#4f46e5;
+  --green:#10b981;--green-light:rgba(16,185,129,.15);--green-dark:#059669;
+  --amber:#f59e0b;--amber-light:rgba(245,158,11,.15);--amber-dark:#d97706;
+  --rose:#f43f5e;--rose-light:rgba(244,63,94,.15);--rose-dark:#e11d48;
+  --radius:12px;--radius-sm:8px;--pill:999px;
+  --sans:-apple-system,'Microsoft YaHei','PingFang SC',sans-serif;
+  --mono:'JetBrains Mono','SF Mono','Menlo','Consolas',monospace;
+  --accent:var(--cyan);--accent-hover:var(--cyan-dark);
+  --pastel-green:var(--green-light);--pastel-green-text:var(--green);
+  --pastel-blue:var(--blue-light);--pastel-blue-text:var(--blue);
+  --pastel-red:var(--rose-light);--pastel-red-text:var(--rose);
+  --pastel-yellow:var(--amber-light);--pastel-yellow-text:var(--amber);
+  --text-tertiary:var(--text-tri);--text-secondary:var(--text-sec);
+}
+body{
+  font-family:var(--sans);
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(0,212,255,.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(99,102,241,.04) 0%, transparent 60%),
+    linear-gradient(180deg, #080c14 0%, #0d1321 50%, #0a0f1a 100%);
+  background-attachment:fixed;
+  color:var(--text);padding:12px;padding-bottom:80px;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;line-height:1.5;
+  min-height:100vh;
+}
+h1{
+  text-align:center;font-size:20px;font-weight:700;margin:8px 0 20px;letter-spacing:.08em;
+  background:linear-gradient(135deg,var(--cyan) 0%,var(--blue) 50%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+h1::before{content:'◇ ';background:linear-gradient(135deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:16px}
+h1::after{content:' ◇';background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:16px}
+.card{
+  background:rgba(16,23,42,.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(0,212,255,.1);border-radius:var(--radius);
+  padding:16px;margin-bottom:12px;position:relative;overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.03);
+}
+.card::before{
+  content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,.3),transparent);
+}
+.card h3{font-size:14px;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:600}
+.step{
+  display:inline-flex;width:26px;height:26px;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));color:#fff;
+  border-radius:6px;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;flex-shrink:0;
+  box-shadow:var(--cyan-glow);font-family:var(--mono);
+}
+label{font-size:12px;color:var(--text-sec);display:block;margin-bottom:4px;font-weight:500;letter-spacing:.02em}
+textarea{
+  width:100%;padding:10px 14px;border:1px solid rgba(0,212,255,.15);
+  border-radius:var(--radius-sm);font-size:13px;font-family:var(--mono);
+  min-height:100px;background:rgba(8,12,20,.6);color:var(--text);
+  transition:border-color .25s,box-shadow .25s;resize:vertical;
+}
+textarea:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 3px rgba(0,212,255,.1),0 0 20px rgba(0,212,255,.06)}
+textarea::placeholder{color:var(--text-tri)}
+input[type=file]{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;z-index:2;cursor:pointer;font-size:0}
+.file-label-wrap{position:relative;display:block;width:100%;min-height:48px}
+.file-label{
+  display:flex;align-items:center;justify-content:center;padding:12px 16px;
+  background:linear-gradient(135deg,var(--cyan),#0088aa);color:#fff;
+  border-radius:var(--radius-sm);font-size:13px;cursor:pointer;text-align:center;
+  width:100%;gap:6px;font-weight:600;transition:all .2s;
+  box-shadow:var(--cyan-glow);letter-spacing:.02em;
+}
+.file-label:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(0,212,255,.35),0 0 80px rgba(0,212,255,.1)}
+.file-label:active{transform:scale(.97)}
+.file-label-blue{background:linear-gradient(135deg,var(--blue),var(--blue-dark));box-shadow:0 0 20px rgba(99,102,241,.3)}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;
+  border:none;border-radius:var(--radius-sm);font-size:13px;font-family:var(--sans);
+  font-weight:600;cursor:pointer;transition:all .2s;gap:4px;letter-spacing:.01em;
+  position:relative;overflow:hidden;
+}
+.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.08),transparent);pointer-events:none}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),#0088aa);color:#fff;box-shadow:0 2px 12px rgba(0,212,255,.25)}
+.btn-primary:hover{box-shadow:0 4px 20px rgba(0,212,255,.4);transform:translateY(-1px)}
+.btn-secondary{background:var(--blue-light);color:var(--blue);border:1px solid rgba(99,102,241,.25)}
+.btn-secondary:hover{background:rgba(99,102,241,.2);border-color:var(--blue)}
+.btn-ghost{background:transparent;color:var(--text-sec);border:1px solid rgba(255,255,255,.08)}
+.btn-ghost:hover{background:rgba(255,255,255,.04);color:var(--text);border-color:rgba(255,255,255,.15)}
+.btn-danger{background:var(--rose-light);color:var(--rose);border:1px solid rgba(244,63,94,.25)}
+.btn-danger:hover{background:rgba(244,63,94,.2)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;filter:grayscale(.5)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.edit-list{margin:8px 0;border:1px solid rgba(0,212,255,.12);border-radius:var(--radius-sm);overflow:hidden;background:rgba(8,12,20,.5)}
+.edit-row{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;transition:background .15s}
+.edit-row:hover{background:rgba(0,212,255,.03)}
+.edit-row:last-child{border-bottom:none}
+.edit-row .name{flex:2;font-weight:600;min-width:0;color:var(--text)}
+.edit-row .qty{flex:0 0 64px;text-align:center}
+.edit-row .qty input{
+  width:56px;padding:5px;border:1px solid rgba(0,212,255,.15);
+  border-radius:6px;text-align:center;font-size:13px;font-family:var(--mono);
+  font-weight:600;color:var(--cyan);background:rgba(8,12,20,.6);
+}
+.edit-row .qty input:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 2px rgba(0,212,255,.15)}
+.edit-row .supplier{flex:1.2;font-size:11px;color:var(--text-tri);font-family:var(--mono)}
+.edit-row .status{flex:0 0 24px;text-align:center}
+.edit-row .del-btn{flex:0 0 28px;text-align:center;color:var(--rose);cursor:pointer;font-size:18px;font-weight:700;opacity:.5;transition:opacity .15s,transform .1s}
+.edit-row .del-btn:hover{opacity:1;transform:scale(1.15)}
+.edit-row.header{
+  background:linear-gradient(90deg,rgba(0,212,255,.08),rgba(99,102,241,.08));
+  border-bottom:1px solid rgba(0,212,255,.15);font-weight:700;
+  font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:.05em;
+}
+.add-row-btn{
+  display:flex;align-items:center;justify-content:center;padding:10px;
+  border:1px dashed rgba(0,212,255,.2);border-radius:var(--radius-sm);
+  color:var(--cyan);cursor:pointer;font-size:13px;font-weight:600;margin-top:8px;
+  transition:all .2s;background:rgba(0,212,255,.03);
+}
+.add-row-btn:hover{background:rgba(0,212,255,.1);border-color:var(--cyan);border-style:solid;box-shadow:0 0 20px rgba(0,212,255,.1)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.stat{padding:14px 8px;border-radius:var(--radius-sm);text-align:center;font-size:11px;font-weight:500;letter-spacing:.02em;border:1px solid}
+.stat:nth-child(1){background:rgba(0,212,255,.06);color:var(--cyan);border-color:rgba(0,212,255,.15)}
+.stat:nth-child(2){background:rgba(99,102,241,.06);color:var(--blue);border-color:rgba(99,102,241,.15)}
+.stat:nth-child(3){background:rgba(16,185,129,.06);color:var(--green);border-color:rgba(16,185,129,.15)}
+.stat:nth-child(4){background:rgba(245,158,11,.06);color:var(--amber);border-color:rgba(245,158,11,.15)}
+.stat b{display:block;font-size:20px;color:inherit;margin-top:6px;font-weight:700;font-family:var(--mono);letter-spacing:-.02em}
+.result-box{
+  background:rgba(8,12,20,.8);color:var(--cyan);padding:16px;
+  border-radius:var(--radius-sm);font-size:13px;white-space:pre-wrap;
+  font-family:var(--mono);margin-top:8px;max-height:400px;overflow:auto;
+  line-height:1.7;border:1px solid rgba(0,212,255,.15);
+  box-shadow:inset 0 0 40px rgba(0,212,255,.03);
+}
+.api-row{display:flex;gap:6px;margin-bottom:6px}
+.api-row input,.api-row select{
+  flex:1;padding:8px 10px;border:1px solid rgba(0,212,255,.12);
+  border-radius:var(--radius-sm);font-size:13px;font-family:var(--mono);
+  background:rgba(8,12,20,.6);color:var(--text);
+}
+.api-row input:focus,.api-row select:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 2px rgba(0,212,255,.12)}
+.api-row select{color:var(--cyan)}
+.api-row select option{background:var(--surface-solid);color:var(--text)}
+.tab-bar{
+  display:flex;background:rgba(0,212,255,.04);border-radius:var(--radius-sm);
+  padding:4px;margin-bottom:12px;gap:4px;border:1px solid rgba(0,212,255,.08);
+}
+.tab-item{
+  flex:1;text-align:center;padding:8px 4px;border-radius:6px;
+  font-size:13px;cursor:pointer;color:var(--text-sec);font-weight:600;
+  transition:all .2s;border:none;background:transparent;letter-spacing:.02em;
+}
+.tab-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.tab-item.active{background:rgba(0,212,255,.12);color:var(--cyan);box-shadow:0 0 20px rgba(0,212,255,.1)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.modal-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);
+  display:none;z-index:100;justify-content:center;align-items:flex-start;
+  padding-top:12vh;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.modal{
+  background:var(--surface-solid);border:1px solid rgba(0,212,255,.15);
+  border-radius:var(--radius);padding:20px;width:90%;max-width:360px;
+  max-height:70vh;overflow-y:auto;
+  box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 60px rgba(0,212,255,.05);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.modal h3{margin-bottom:12px;font-size:15px;font-weight:700;color:var(--cyan)}
+.modal input{
+  width:100%;padding:10px;border:1px solid rgba(0,212,255,.12);
+  border-radius:var(--radius-sm);font-size:14px;margin-bottom:10px;
+  background:rgba(8,12,20,.6);color:var(--text);
+}
+.modal input:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 2px rgba(0,212,255,.15)}
+.badge{display:inline-block;padding:3px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid}
+.badge-green{background:rgba(16,185,129,.1);color:var(--green);border-color:rgba(16,185,129,.2)}
+.badge-blue{background:rgba(99,102,241,.1);color:var(--blue);border-color:rgba(99,102,241,.2)}
+.badge-red{background:rgba(244,63,94,.1);color:var(--rose);border-color:rgba(244,63,94,.2)}
+.badge-yellow{background:rgba(245,158,11,.1);color:var(--amber);border-color:rgba(245,158,11,.2)}
+.hint{font-size:11px;color:var(--text-tri);margin-top:4px}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.status-dot-ok{background:var(--green);box-shadow:0 0 10px var(--green)}
+.status-dot-warn{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+.status-dot-err{background:var(--rose);box-shadow:0 0 10px var(--rose)}
+@keyframes popIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@supports not (backdrop-filter:blur(20px)){
+  .card{background:rgba(16,23,42,.95);}
+  .modal-overlay{background:rgba(0,0,0,.8);}
+  .modal{background:#10172a;}
+}
+@supports not (color:var(--cyan)){
+  body{color:#e0e6f0;}
+  h1{color:#00d4ff;}
+  .card{color:#e0e6f0;border-color:rgba(0,212,255,.1);}
+}
+.card{animation:popIn .5s cubic-bezier(.16,1,.3,1) both}
+.card:nth-child(2){animation-delay:.06s}
+.card:nth-child(3){animation-delay:.12s}
+.card:nth-child(4){animation-delay:.18s}
+@media(prefers-reduced-motion:reduce){.card{animation:none}*:active{transform:none!important}}
+.car-no-bar{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:linear-gradient(90deg,rgba(0,212,255,.08),rgba(99,102,241,.08));
+  border-radius:var(--radius-sm);font-size:13px;color:var(--cyan);font-weight:600;
+  margin:8px 0;border:1px solid rgba(0,212,255,.12);
+}
+.car-no-bar b{color:#fff;font-weight:700;text-shadow:0 0 10px rgba(0,212,255,.5)}
+/* ===== 多车次Tab栏 ===== */
+.tabs-bar{display:flex;gap:6px;overflow-x:auto;padding:6px 0;margin-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap}
+.tabs-bar::-webkit-scrollbar{display:none}
+.tabs-tab{flex:0 0 auto;padding:8px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;border:1px solid rgba(0,212,255,.15);background:rgba(16,23,42,.5);color:var(--text-sec);position:relative}
+.tabs-tab.active{background:linear-gradient(135deg,rgba(0,212,255,.2),rgba(99,102,241,.15));color:var(--cyan);border-color:var(--cyan);box-shadow:0 0 16px rgba(0,212,255,.15)}
+.tabs-tab .tabs-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+.tabs-tab .tabs-dot.done{background:var(--green)}
+.tabs-tab .tabs-dot.edit{background:var(--amber)}
+.tabs-tab .tabs-dot.new{background:var(--text-tri)}
+.tabs-add{flex:0 0 auto;padding:8px 12px;border-radius:999px;font-size:18px;cursor:pointer;border:1px dashed rgba(0,212,255,.2);background:transparent;color:var(--cyan);transition:all .2s;display:flex;align-items:center;line-height:1}
+.tabs-add:hover{border-color:var(--cyan);background:rgba(0,212,255,.08)}
+.tabs-tab .tabs-del{display:none;margin-left:6px;font-size:12px;opacity:.5;cursor:pointer}
+.tabs-tab:hover .tabs-del{display:inline}
+.tabs-tab .tabs-del:hover{opacity:1;color:var(--rose)}
+.tabs-ren{background:rgba(0,0,0,.3);border:1px solid var(--cyan);border-radius:6px;padding:2px 8px;color:var(--cyan);font-size:13px;width:80px;font-family:var(--sans);outline:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:rgba(8,12,20,.5)}
+::-webkit-scrollbar-thumb{background:rgba(0,212,255,.15);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,212,255,.25)}
+#qName,#qQty{padding:10px;border:1px solid rgba(0,212,255,.12);border-radius:var(--radius-sm);font-size:14px;font-family:var(--sans);background:rgba(8,12,20,.6);color:var(--text)}
+#qName:focus,#qQty:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 2px rgba(0,212,255,.12)}
+#imgPreview img,#manualPhotoImg{border-radius:var(--radius-sm);border:1px solid rgba(0,212,255,.1)}
+	</style>
+	<link rel="manifest" href="manifest.json">
+	<meta name="theme-color" content="#00d4ff">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="报关生成器">
+	<link rel="apple-touch-icon" href="icon-192.png">
+	<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script></head>
+<body>
+<h1>报关初稿 v6.4</h1>
+<div class="tabs-bar" id="carTabsBar"><button class="tabs-tab" onclick="switchCarTab(0)" ondblclick="renameCarTab(0,this)"><span class="tabs-dot edit"></span>19-1<span class="tabs-del" onclick="delCarTab(0,event)">×</span></button><button class="tabs-tab active" onclick="switchCarTab(1)" ondblclick="renameCarTab(1,this)"><span class="tabs-dot edit"></span>67-1<span class="tabs-del" onclick="delCarTab(1,event)">×</span></button><button class="tabs-tab" onclick="switchCarTab(2)" ondblclick="renameCarTab(2,this)"><span class="tabs-dot edit"></span>21-1<span class="tabs-del" onclick="delCarTab(2,event)">×</span></button><button class="tabs-add" onclick="addCarTab()">+</button></div>
+<div class="card" style="padding:12px 20px;cursor:pointer" onclick="toggleApi()">
+  <span style="font-size:13px;font-weight:500">API 设置</span><span id="apiDot" style="float: right; color: var(--pastel-green-text); font-size: 12px;">已设置</span>
+</div>
+<div id="apiPanel" class="card" style="display:none;margin-top:-4px">
+  <div class="api-row">
+    <select id="apiProvider" style="flex:0 0 100px" onchange="toggleApiFields()">
+      <option value="deepseek">DeepSeek</option>
+      <option value="glm">GLM(智谱)</option>
+    </select>
+    <input type="password" id="apiKey" placeholder="API Key">
+    <button class="btn btn-sm btn-primary" onclick="saveApi()">保存</button>
+  </div>
+  <div id="deepseekFields" style="display: block;">
+    <div class="hint">端点: api.deepseek.com / 模型: deepseek-chat</div>
+  </div>
+  <div id="glmFields" style="display: none;">
+    <div class="hint">端点: open.bigmodel.cn / 模型: glm-4v-flash</div>
+    <div class="hint" style="margin-top:2px">OCR识别需要GLM-OCR（可混用两个Key）</div>
+  </div>
+</div>
+<div style="position: fixed; bottom: 20px; right: 12px; z-index: 999; font-size: 13px; display: block;" id="learnCard">
+  <div style="background:rgba(16,23,42,.92);border:1px solid rgba(0,212,255,.3);border-radius:24px;padding:10px 18px;cursor:pointer;display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,.4);min-height:44px" onclick="toggleLearnPanel()">
+    <span id="learnCount" style="color:var(--cyan);font-weight:700">156+4</span>
+    <span style="color:var(--text-sec)">别名</span>
+    <span style="color:var(--text-tri);font-size:10px" id="learnArrow">▼</span>
+  </div>
+  <div id="learnPanel" style="display: block; position: absolute; bottom: 52px; right: 0px; background: rgba(16, 23, 42, 0.95); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 12px; padding: 12px; min-width: 280px; max-height: 70vh; overflow-y: auto; backdrop-filter: blur(8px); box-shadow: rgba(0, 0, 0, 0.5) 0px 8px 30px;">
+    <div id="learnList" style="max-height:200px;overflow-y:auto;margin:6px 0;font-size:12px"><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12 → <b>12*197四層獨立紙包</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1813 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1813">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>MX1000盒 → <b>美星1000盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="MX1000盒">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>MX700碗 → <b>美星700碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="MX700碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>熱杯280g → <b>280 8安花紙杯</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="熱杯280g">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16安透明碗 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16安透明碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>黑色美式1000 → <b>1000美黑</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="黑色美式1000">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16透明 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H12透明 → <b>H12碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H12透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H16白色. → <b>H16白碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H16白色.">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H30透明 → <b>H30碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H30透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>Dg11. → <b>DG-11透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="Dg11.">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1-2安甘蔗蓋 → <b>2安甘蔗杯蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1-2安甘蔗蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H1250蓋 → <b>H1250碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H1250蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30安透明 → <b>H30碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30安透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>熱杯250g → <b>250 8安花紙杯</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="熱杯250g">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30安蓋 → <b>H24-30碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30安蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>興1000透碗 → <b>興年華1000碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="興1000透碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30-35紙碗蓋 → <b>H24-30碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30-35紙碗蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>35紙碗 → <b>35安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="35紙碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>Y1200透碗 → <b>Y1200碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="Y1200透碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>Y1350透碗 → <b>Y1350碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="Y1350透碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30安透明碗 → <b>H30碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30安透明碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30安白色碗 → <b>H30白碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30安白色碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1000方紙合 → <b>1000紙盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1000方紙合">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30透明 → <b>H30碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>透明30碗 → <b>H30碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="透明30碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色30 → <b>H30白碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色30">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>淨12膠碗 → <b>H12碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="淨12膠碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H盖 → <b>盒蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H盖">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>紙飯羹 → <b>甘蔗中更</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="紙飯羹">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>28mm內格 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="28mm內格">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>80PP熱蓋 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="80PP熱蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1813 加厚黑色 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1813 加厚黑色">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>加厚黑色 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="加厚黑色">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>MX750盒 → <b>美星750盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="MX750盒">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>9 甘蔗圓碟 → <b>9"甘蔗圓碟</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="9 甘蔗圓碟">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>甘蔗圓碟 → <b>9"甘蔗圓碟</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="甘蔗圓碟">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16黑碗 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16黑碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>7 *197 獨立包裝 → <b>7*197四層獨立紙包</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="7 *197 獨立包裝">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12安白紙碗 → <b>12安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12安白紙碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>甘蔗1000盒 → <b>1000甘蔗盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="甘蔗1000盒">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>甘蔗1000盖 → <b>1000甘蔗盒盖</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="甘蔗1000盖">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>銀僑1200美透 → <b>X11</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="銀僑1200美透">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12安透明碗 → <b>H12碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12安透明碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H1250白色 → <b>H1250白碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H1250白色">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>銀橋1200美透 → <b>X11</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="銀橋1200美透">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H-1250 蓋 → <b>H1250碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H-1250 蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H-1250 → <b>H1250碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H-1250">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>2000魚盒黑 → <b>Hs2000美式</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="2000魚盒黑">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>興1250碗黑 → <b>興明發1250黑碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="興1250碗黑">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>DG23透明 → <b>DG一23</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="DG23透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>7 加厚甘蔗圓碟 → <b>7"甘蔗圓碟(加厚)</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="7 加厚甘蔗圓碟">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>加厚甘蔗圓碟 → <b>7"甘蔗圓碟(加厚)</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="加厚甘蔗圓碟">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>6*197三層散 → <b>6*197 三層紙飲管</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="6*197三層散">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>甘蔗碟9寸圓碟 → <b>9"甘蔗圓碟</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="甘蔗碟9寸圓碟">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS1500透碗 → <b>HS1500碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS1500透碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS1000透明美式 → <b>HS1000+</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS1000透明美式">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS1000透方盒 → <b>HS1000方盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS1000透方盒">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS142高蓋 → <b>HS142蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS142高蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1250內隔 → <b>HS內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1250內隔">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>6*197三散 → <b>6*197 三層紙飲管</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="6*197三散">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>7*197四散 → <b>7*197 四層紙飲管</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="7*197四散">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12*197四散 → <b>12*197 四層紙飲管</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12*197四散">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>長方750紙盒 → <b>750紙盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="長方750紙盒">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>850蓋 → <b>850蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="850蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16安碗 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16安碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16安蓋 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16安蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1300沙拉碗 → <b>35安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1300沙拉碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1300紙碗 → <b>35安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1300紙碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>PP熱蓋 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="PP熱蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>T38 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="T38">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>T34 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="T34">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>T36 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="T36">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>T316 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="T316">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>茂盈 → <b>1000美黑</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="茂盈">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>24透 → <b>H24碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="24透">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS1350黑碗 → <b>Y1350碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS1350黑碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS700黑碗 → <b>Y1200碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS700黑碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>LS55 → <b>LS一55</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="LS55">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>LS55(150装箱) → <b>LS一55</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="LS55(150装箱)">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>容750 → <b>容海500</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="容750">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>容1000 → <b>興明發500底</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="容1000">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>DG11透明 → <b>DG-11透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="DG11透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>DG11 → <b>DG-11透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="DG11">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>银桥X11 → <b>X11</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="银桥X11">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>7加厚甘蔗圓碟 → <b>7"甘蔗圓碟(加厚)</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="7加厚甘蔗圓碟">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS內格 → <b>HS內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS內格">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>美黑1000 → <b>1000美黑</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="美黑1000">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>美黑 → <b>1000美黑</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="美黑">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H1250透明 → <b>H1250碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H1250透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色LS-55 → <b>LS一55白</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色LS-55">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色LS- → <b>LS一55白</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色LS-">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30紙碗 → <b>30安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30紙碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>9吋甘蔗紙碟 → <b>9"甘蔗圓碟</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="9吋甘蔗紙碟">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色8安 杯 → <b>8安白杯</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色8安 杯">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色8安 → <b>8安白杯</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色8安">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>650盒 → <b>H650</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="650盒">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色H-1500碗 → <b>H1250白碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色H-1500碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS2000魚盒黑 → <b>Hs2000美式</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS2000魚盒黑">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>銀橋1200美式透明合 → <b>1000美透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="銀橋1200美式透明合">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>7安杯 → <b>8安白杯</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="7安杯">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30安白碗 → <b>H30白碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30安白碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12胶碗透 → <b>H12碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12胶碗透">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>興年华1000碗 → <b>興年華1000碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="興年华1000碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>DG11. → <b>DG-11透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="DG11.">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>DG → <b>DG-11透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="DG">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12透明 → <b>H12碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12透明">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12白色 → <b>H12白碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12白色">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>2015B.白加厚 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="2015B.白加厚">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>2安甘蔗蓋 → <b>2安甘蔗杯蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="2安甘蔗蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>LS 2A → <b>LS一2A</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="LS 2A">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>LS → <b>LS一2A</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="LS">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>2A → <b>LS一2A</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="2A">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS500透碗 → <b>HS500圓盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS500透碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>28mm内格 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="28mm内格">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H16胶碗 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H16胶碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16pp碗 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16pp碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>24pp碗 → <b>H24碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="24pp碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>30pp碗 → <b>H30碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="30pp碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12-16 盖 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12-16 盖">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12-16 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12-16">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12-16pp碗盖 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12-16pp碗盖">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>24-30pp碗盖 → <b>H24-30碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="24-30pp碗盖">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>4.0內格 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="4.0內格">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色12 紙碗 → <b>12安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色12 紙碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>白色12 → <b>12安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="白色12">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>紙碗 → <b>12安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="紙碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>Dg11 → <b>DG-11透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="Dg11">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>Dg → <b>DG-11透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="Dg">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>PS熱蓋 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="PS熱蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>韓盛1.5安醬杯 → <b>HS2安杯</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="韓盛1.5安醬杯">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12-16安蓋 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12-16安蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>24安透明碗 → <b>H24碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="24安透明碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>興1250ml透碗 → <b>興明發1250碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="興1250ml透碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS2000ml美透 → <b>Hs2000美式</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS2000ml美透">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS2000黑碗 → <b>Hs2000美式</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS2000黑碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>銀橋美式750方合黑色 → <b>1000美透</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="銀橋美式750方合黑色">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>韓盛3000透明圓盆 → <b>HS1750碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="韓盛3000透明圓盆">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>LS1000 → <b>1000美黑</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="LS1000">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>LS蓋 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="LS蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>H1500黑碗 → <b>H1250碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="H1500黑碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS3000ml黑色碗 → <b>HS1750碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS3000ml黑色碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>16胶碗 → <b>H16碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="16胶碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>HS700黑碗底 → <b>Y1200碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="HS700黑碗底">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>中央化學115盒 → <b>中央CTP115盒</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="中央化學115盒">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>中央化學115蓋 → <b>中央CTP115蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="中央化學115蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>紙盒膠蓋 → <b>H12-16碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="紙盒膠蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>500-1000ml 蓋 → <b>H24-30碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="500-1000ml 蓋">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>500-1000ml → <b>H24-30碗蓋</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="500-1000ml">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>250热杯 → <b>250 8安花紙杯</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="250热杯">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12啡紙碗 → <b>12安紙碗</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12啡紙碗">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>12 X197四紙包 → <b>12*197四層獨立紙包</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="12 X197四紙包">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>X197四紙包 → <b>12*197四層獨立紙包</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="X197四紙包">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>1813黑碟加厚100裝 → <b>28MM內格</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="1813黑碟加厚100裝">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(244,63,94,.08);border-radius:6px;font-size:12px"><span>🚫 <b>白色大圓碟 2000裝</b>（不报关）</span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-exkey="白色大圓碟 2000裝">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(244,63,94,.08);border-radius:6px;font-size:12px"><span>🚫 <b>中一深</b>（不报关）</span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-exkey="中一深">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(244,63,94,.08);border-radius:6px;font-size:12px"><span>🚫 <b>HKT8</b>（不报关）</span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-exkey="HKT8">×</span></div><div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(244,63,94,.08);border-radius:6px;font-size:12px"><span>🚫 <b>HK 11</b>（不报关）</span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-exkey="HK 11">×</span></div></div>
+    <div style="display:flex;gap:4px;margin-top:8px">
+      <button style="flex:1;padding:6px;font-size:11px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.15);border-radius:6px;color:var(--cyan);cursor:pointer" onclick="event.stopPropagation();exportLearned()">📤 导出</button>
+      <button style="flex:1;padding:6px;font-size:11px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.15);border-radius:6px;color:var(--cyan);cursor:pointer" onclick="event.stopPropagation();document.getElementById('importLearnFile').click()">📥 导入</button>
+      <button style="flex:1;padding:6px;font-size:11px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.15);border-radius:6px;color:var(--cyan);cursor:pointer" onclick="event.stopPropagation();bakeHTML()">🔒 嵌入</button>
+      <button style="padding:6px 8px;font-size:11px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.15);border-radius:6px;color:var(--rose);cursor:pointer" onclick="event.stopPropagation();clearLearned()">🗑</button>
+    </div>
+    <input type="file" id="importLearnFile" accept=".json" onchange="importLearned(event)" style="display:none">
+  </div>
+</div>
+<div class="card">
+  <div style="display:flex;align-items:center;gap:8px"><span class="step">1</span><span style="font-weight:500">上传模板</span></div>
+  <div style="margin-top:10px">
+    <div class="file-label-wrap">
+      <input type="file" id="templateFile" onchange="loadTemplate(event)">
+      <div class="file-label">选择模板文件 (.xlsx)</div>
+    </div>
+    <div id="templateStatus" class="hint"><span class="badge badge-green">已加载: 模板1 V5.xlsx / 155个产品</span></div>
+    <div class="hint" style="color:var(--text-tertiary)">上传一次自动保存，下次打开自动加载</div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display:flex;align-items:center;gap:8px"><span class="step">2</span><span style="font-weight:500">装车单</span></div>
+  <div class="tab-bar" style="margin-top:10px">
+    <div class="tab-item active" onclick="switchTab('text')">文字</div>
+    <div class="tab-item" onclick="switchTab('image')">图片</div>
+    <div class="tab-item" onclick="switchTab('manual');initManual()">录入</div>
+  </div>
+  <div id="carNoBar" class="car-no-bar" style="display: block;">
+    车号: <b id="carNoText">67-1</b> / 客户: <b id="carNoCustomer"></b>
+  </div>
+  <div class="tab-panel active" id="tabText">
+    <textarea id="inputText" placeholder="粘贴装车单文字...
+例: H750 20箱  H650 2板"></textarea>
+  </div>
+  <div class="tab-panel" id="tabImage">
+    <div class="file-label-wrap">
+      <input type="file" id="imageInput" accept="image/*" onchange="onImage(event)">
+      <div class="file-label file-label-blue">选择 / 拍照</div>
+    </div>
+    <div id="imgPreview" style="display:none;margin-top:8px"><img id="previewImg" style="max-width:100%;border-radius:var(--radius-sm);max-height:200px;cursor:pointer" onclick="togglePhotoView()" src=""></div>
+    <div id="ocrStatus" class="hint"></div>
+  </div>
+  <div class="tab-panel" id="tabManual">
+    <div id="manualPhotoBar" style="display:none;margin-bottom:8px;text-align:center">
+      <img id="manualPhotoImg" style="max-width:100%;border-radius:var(--radius-sm);max-height:140px;cursor:pointer" onclick="togglePhotoView()">
+      <div class="hint" style="text-align:center">点击放大</div>
+    </div>
+    <div class="quick-add" style="display:flex;gap:6px;margin-bottom:8px">
+      <input type="text" id="qName" placeholder="搜产品名..." list="prodList" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:var(--sans);color:var(--text);background:var(--surface)" onkeydown="onQuickKeydown(event)" onfocus="this.style.borderColor='var(--text-secondary)'" onblur="this.style.borderColor='var(--border)'">
+      <input type="number" id="qQty" placeholder="箱" min="1" style="width:64px;padding:10px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;text-align:center;font-family:var(--sans);color:var(--text);background:var(--surface)" onkeydown="if(event.key==='Enter')quickAdd()" onfocus="this.style.borderColor='var(--text-secondary)'" onblur="this.style.borderColor='var(--border)'">
+      <button class="btn btn-sm btn-primary" onclick="quickAdd()" style="flex:none;padding:10px 14px;font-size:16px">+</button>
+    </div>
+    <div id="manualList" style="margin-top:4px"><div style="color:#999;padding:8px;text-align:center">暂无产品，搜索添加</div></div>
+    <div id="manualTotal" style="font-size:13px;color:var(--text-secondary);margin-top:6px;display:none"></div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-primary" onclick="manualToMatch()">生成初稿</button>
+      <button class="btn btn-ghost" onclick="clearManual()">重置</button>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="parseText()" id="btnParse">解析装车单</button>
+    <button class="btn btn-secondary" onclick="ocrImage()" id="btnOcr">OCR 识别</button>
+  </div>
+</div>
+<div class="card" id="matchCard" style="display: block;">
+  <div style="display:flex;align-items:center;gap:8px"><span class="step">3</span><span style="font-weight:500">核对确认</span></div>
+  <div class="stats" id="statsArea"><div class="stat">匹配<b>18</b></div><div class="stat">箱数<b>320</b></div><div class="stat">净重<b>1831.5</b></div><div class="stat">金额<b>¥26965.96</b></div></div>
+  <div id="diffPanel" style="display: block; margin: 8px 0px; font-size: 12px; max-height: 200px; overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px;">
+    <div style="font-weight:500;margin-bottom:6px;color:var(--text-secondary)">原文 → 清洗后</div>
+    <div id="diffContent"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">原文 <b>28</b> 行 → 清洗后 <b>26</b> 行</div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">1.</span> <span style="color:var(--pastel-green-text)">CH23 41箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">2.</span> <span style="color:var(--pastel-green-text)">DG11 28箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">3.</span> <span style="color:var(--pastel-green-text)">250热杯 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">4.</span> <span style="color:var(--pastel-green-text)">H盖 50箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">5.</span> <span style="color:var(--pastel-green-text)">12啡紙碗 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">6.</span> <span style="color:var(--pastel-green-text)">16蓋 5箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">7.</span> <span style="color:var(--pastel-green-text)">HS1安杯 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">8.</span> <span style="color:var(--pastel-green-text)">HS2安杯 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">9.</span> <span style="color:var(--pastel-green-text)">HS1500美透 5箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">10.</span> <span style="color:var(--pastel-green-text)">HS2000美透 5箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">11.</span> <span style="color:var(--pastel-green-text)">600樽 15箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">12.</span> <span style="color:var(--pastel-green-text)">1813黑碟加厚100裝 5箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">13.</span> <span style="color:var(--pastel-green-text)">28mm内格 9箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">14.</span> <span style="color:var(--pastel-green-text)">12 X197四紙包 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">15.</span> <span style="color:var(--pastel-green-text)">12 X197四散 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">16.</span> <span style="color:var(--pastel-green-text)">6 X197四散 43箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">17.</span> <span style="color:var(--pastel-green-text)">6 X197四紙包 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">18.</span> <span style="color:var(--pastel-green-text)">7 X197四散 20箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">19.</span> <span style="color:var(--pastel-green-text)">X04 15箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">20.</span> <span style="color:var(--pastel-green-text)">CH23 44箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">21.</span> <span style="color:var(--pastel-green-text)">CH18 15箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">22.</span> <span style="color:var(--pastel-green-text)">X23 10箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">23.</span> <span style="color:var(--pastel-green-text)">G50 5箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">24.</span> <span style="color:var(--pastel-green-text)">X66 5箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">25.</span> <span style="color:var(--pastel-green-text)">1000美透 30箱</span></div><div style="padding:2px 4px;margin:1px 0;border-radius:3px"><span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">26.</span> <span style="color:var(--pastel-green-text)">1000美黑 50箱</span></div></div>
+  </div>
+  <div class="edit-list" id="editList"><div class="edit-row header"><span class="name">装车单名 → 模板产品名</span><span class="qty">数量</span><span class="supplier">供应商</span><span class="status"></span><span class="del-btn"></span></div><div class="edit-row">
+      <span class="name">1. <span style="color:var(--text-tertiary);font-weight:normal">DG11</span> → DG-11透</span>
+      <span class="qty"><input type="number" value="28" min="1" onchange="updateQty(0,this.value)"></span>
+      <span class="supplier">大江環保</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(0)">×</span>
+    </div><div class="edit-row">
+      <span class="name">2. <span style="color:var(--text-tertiary);font-weight:normal">250热杯</span> → 250 8安花紙杯</span>
+      <span class="qty"><input type="number" value="10" min="1" onchange="updateQty(1,this.value)"></span>
+      <span class="supplier">溫洲捷弗瑞材料有限公司</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(1)">×</span>
+    </div><div class="edit-row">
+      <span class="name">3. <span style="color:var(--text-tertiary);font-weight:normal">H盖</span> → 盒蓋</span>
+      <span class="qty"><input type="number" value="50" min="1" onchange="updateQty(2,this.value)"></span>
+      <span class="supplier"><select style="font-size:11px;font-family:var(--mono);background:rgba(8,12,20,.6);color:var(--text-tri);border:1px solid rgba(0,212,255,.15);border-radius:4px;padding:2px 4px;max-width:120px" onchange="switchSupplier(2,this.value)"><option value="深圳興明發">深圳興明發</option><option value="河南海翔新材料科技有限公司" selected="">河南海翔新材料科技有限公司</option></select></span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(2)">×</span>
+    </div><div class="edit-row">
+      <span class="name">4. <span style="color:var(--text-tertiary);font-weight:normal">12啡紙碗</span> → 12安紙碗</span>
+      <span class="qty"><input type="number" value="10" min="1" onchange="updateQty(3,this.value)"></span>
+      <span class="supplier">溫洲捷弗瑞材料有限公司</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(3)">×</span>
+    </div><div class="edit-row">
+      <span class="name">5. <span style="color:var(--text-tertiary);font-weight:normal">16蓋</span> → H12-16碗蓋</span>
+      <span class="qty"><input type="number" value="5" min="1" onchange="updateQty(4,this.value)"></span>
+      <span class="supplier">深圳興明發</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(4)">×</span>
+    </div><div class="edit-row">
+      <span class="name">6. <span style="color:var(--text-tertiary);font-weight:normal">HS1安杯</span> → HS1安杯</span>
+      <span class="qty"><input type="number" value="10" min="1" onchange="updateQty(5,this.value)"></span>
+      <span class="supplier">汕頭韓盛</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(5)">×</span>
+    </div><div class="edit-row">
+      <span class="name">7. <span style="color:var(--text-tertiary);font-weight:normal">HS2安杯</span> → HS2安杯</span>
+      <span class="qty"><input type="number" value="10" min="1" onchange="updateQty(6,this.value)"></span>
+      <span class="supplier">汕頭韓盛</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(6)">×</span>
+    </div><div class="edit-row">
+      <span class="name">8. <span style="color:var(--text-tertiary);font-weight:normal">HS1500美透</span> → Hs1500美式</span>
+      <span class="qty"><input type="number" value="5" min="1" onchange="updateQty(7,this.value)"></span>
+      <span class="supplier">汕頭韓盛</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(7)">×</span>
+    </div><div class="edit-row">
+      <span class="name">9. <span style="color:var(--text-tertiary);font-weight:normal">HS2000美透</span> → Hs2000美式</span>
+      <span class="qty"><input type="number" value="5" min="1" onchange="updateQty(8,this.value)"></span>
+      <span class="supplier">汕頭韓盛</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(8)">×</span>
+    </div><div class="edit-row">
+      <span class="name">10. <span style="color:var(--text-tertiary);font-weight:normal">1813黑碟加厚100裝</span> → 28MM內格</span>
+      <span class="qty"><input type="number" value="5" min="1" onchange="updateQty(9,this.value)"></span>
+      <span class="supplier">深圳興明發</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(9)">×</span>
+    </div><div class="edit-row">
+      <span class="name">11. <span style="color:var(--text-tertiary);font-weight:normal">28mm内格</span> → 28MM內格</span>
+      <span class="qty"><input type="number" value="9" min="1" onchange="updateQty(10,this.value)"></span>
+      <span class="supplier">深圳興明發</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(10)">×</span>
+    </div><div class="edit-row">
+      <span class="name">12. <span style="color:var(--text-tertiary);font-weight:normal">12 X197四紙包</span> → 12*197四層獨立紙包</span>
+      <span class="qty"><input type="number" value="10" min="1" onchange="updateQty(11,this.value)"></span>
+      <span class="supplier">溫洲捷弗瑞材料有限公司</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(11)">×</span>
+    </div><div class="edit-row">
+      <span class="name">13. <span style="color:var(--text-tertiary);font-weight:normal">12 X197四散</span> → 12*197 四層紙飲管</span>
+      <span class="qty"><input type="number" value="10" min="1" onchange="updateQty(12,this.value)"></span>
+      <span class="supplier">溫洲捷弗瑞材料有限公司</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(12)">×</span>
+    </div><div class="edit-row">
+      <span class="name">14. <span style="color:var(--text-tertiary);font-weight:normal">6 X197四散</span> → 6*197 四層紙飲管</span>
+      <span class="qty"><input type="number" value="43" min="1" onchange="updateQty(13,this.value)"></span>
+      <span class="supplier">溫洲捷弗瑞材料有限公司</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(13)">×</span>
+    </div><div class="edit-row">
+      <span class="name">15. <span style="color:var(--text-tertiary);font-weight:normal">6 X197四紙包</span> → 12*197四層獨立紙包</span>
+      <span class="qty"><input type="number" value="10" min="1" onchange="updateQty(14,this.value)"></span>
+      <span class="supplier">溫洲捷弗瑞材料有限公司</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(14)">×</span>
+    </div><div class="edit-row">
+      <span class="name">16. <span style="color:var(--text-tertiary);font-weight:normal">7 X197四散</span> → 7*197 四層紙飲管</span>
+      <span class="qty"><input type="number" value="20" min="1" onchange="updateQty(15,this.value)"></span>
+      <span class="supplier">溫洲捷弗瑞材料有限公司</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(15)">×</span>
+    </div><div class="edit-row">
+      <span class="name">17. <span style="color:var(--text-tertiary);font-weight:normal">1000美透</span> → 1000美透</span>
+      <span class="qty"><input type="number" value="30" min="1" onchange="updateQty(16,this.value)"></span>
+      <span class="supplier">深圳興明發</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(16)">×</span>
+    </div><div class="edit-row">
+      <span class="name">18. <span style="color:var(--text-tertiary);font-weight:normal">1000美黑</span> → 1000美黑</span>
+      <span class="qty"><input type="number" value="50" min="1" onchange="updateQty(17,this.value)"></span>
+      <span class="supplier">深圳興明發</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(17)">×</span>
+    </div><div style="margin-top:6px;padding:10px;background:var(--pastel-red);border-radius:var(--radius-sm);font-size:13px;color:var(--pastel-red-text)"><b>已识别不报关产品（已自动跳过）</b>:<br><span class="badge badge-red" style="margin:3px 4px">CH23 41箱</span><span class="badge badge-red" style="margin:3px 4px">600樽 15箱</span><span class="badge badge-red" style="margin:3px 4px">X04 15箱</span><span class="badge badge-red" style="margin:3px 4px">CH23 44箱</span><span class="badge badge-red" style="margin:3px 4px">CH18 15箱</span><span class="badge badge-red" style="margin:3px 4px">X23 10箱</span><span class="badge badge-red" style="margin:3px 4px">G50 5箱</span><span class="badge badge-red" style="margin:3px 4px">X66 5箱</span></div></div>
+  <div class="add-row-btn" onclick="showAdd()">+ 手动添加产品</div>
+  <div class="btn-row" style="margin-top:10px">
+    <button class="btn btn-primary" onclick="genWechat()">微信消息</button>
+    <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+    <button class="btn btn-ghost" onclick="matchWeight()">🔄 匹配磅单</button>
+    <button class="btn btn-ghost" onclick="clearMatch()">清空</button>
+    <button class="btn btn-secondary" onclick="nextOrder()">下一单</button>
+  </div>
+</div>
+<div class="card" id="resultCard" style="display: block;">
+  <h3>结果</h3>
+  <div id="resultArea" class="result-box"><button style="float:right;padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--sans)" onclick="copyResult()">复制</button>67  興協出口  深圳湾
+
+1）塑料餐具：杯（两種）汕頭
+牌子：韓盛
+箱數：20
+毛重量：92.00
+淨重量：82.00
+规格：4、8
+¥1325.40
+
+2）塑料餐具：飯盒（两種）汕頭
+牌子：韓盛
+箱數：10
+毛重量：69.75
+淨重量：64.75
+规格：10×2、12×6
+¥898.10
+
+3）塑料餐具：飯盒（两種）深圳
+牌子：没有
+箱數：80
+毛重量：480.00
+淨重量：440.00
+规格：10×2、12×6
+¥5285.60
+
+4）塑料餐具：飯盒（一種）惠州
+牌子：没有
+箱數：28
+毛重量：207.20
+淨重量：193.20
+规格：10×2
+¥2119.60
+
+5）塑料飯盒蓋（一種）河南周口
+牌子：没有
+箱數：50
+毛重量：250.00
+淨重量：225.00
+规格：10×2
+¥2777.00
+
+6）塑料碗蓋（一種）深圳
+牌子：没有
+箱數：5
+毛重量：15.00
+淨重量：12.50
+规格：8×2
+¥175.10
+
+7）塑料餐具：碟（一種）深圳
+牌子：没有
+箱數：14
+毛重量：63.00
+淨重量：56.00
+规格：12×8
+¥890.96
+
+8）紙餐具：杯（一種）溫洲
+牌子：没有
+箱數：10
+毛重量：75.00
+淨重量：70.00
+规格：8
+¥949.60
+
+9）紙餐具：碗（一種）溫洲
+牌子：没有
+箱數：10
+毛重量：55.00
+淨重量：50.00
+规格：4
+¥739.00
+
+10）紙吸管（多種）溫洲
+牌子：没有
+箱數：93
+毛重量：684.50
+淨重量：638.00
+规格：12×197、6×197、7×197
+¥11805.60
+
+總數量320箱
+總淨重1831.45kg
+總價錢¥26965.96</div>
+</div>
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>添加产品</h3>
+    <input type="text" id="addName" placeholder="产品名（可输入搜索）" list="prodList" onfocus="setTimeout(()=&gt;this.scrollIntoView({block:'center'}),300)" autocomplete="off">
+    <datalist id="prodList"></datalist>
+    <input type="number" id="addQty" placeholder="数量(箱)" min="1">
+    <div class="btn-row">
+      <button class="btn btn-sm btn-primary" onclick="confirmAdd()">添加</button>
+      <button class="btn btn-sm btn-ghost" onclick="closeAdd()">取消</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="weightModal" style="display: none;">
+  <div class="modal">
+    <h3>⚖️ 磅单净重匹配</h3>
+    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">输入磅单上的车辆总净重，程序自动调整兴明发产品箱数使整车净重匹配</div>
+    <div style="display:flex;gap:8px;align-items:center;margin:10px 0">
+      <span style="white-space:nowrap">磅单净重 (kg):</span>
+      <input type="number" id="targetWeight" placeholder="例: 3185.5" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" style="flex:1;padding:10px;border:1px solid rgba(0,212,255,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px;font-family:var(--mono)">
+    </div>
+    <div id="weightInfo" style="font-size:12px;color:var(--text-sec);margin:8px 0"><span style="color:var(--cyan)">当前整车总净重: <b>1851.5 kg</b></span> · 其中兴明发产品 5 种</div>
+    <div id="weightSuggest" style="margin:8px 0"></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-primary" onclick="calcWeight()">计算</button>
+      <button class="btn btn-sm btn-secondary" onclick="applyWeight()" id="btnApplyWeight" disabled="">确认调整</button>
+      <button class="btn btn-sm btn-ghost" onclick="closeWeight()">取消</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="carNoModal">
+  <div class="modal">
+    <h3>输入车号</h3>
+    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">未检测到车号，请输入（19/21/67）</div>
+    <input type="text" id="carNoInput" placeholder="例: 19">
+    <div class="btn-row">
+      <button class="btn btn-sm btn-primary" onclick="confirmCarNo()">确认</button>
+      <button class="btn btn-sm btn-ghost" onclick="closeCarNoModal()">取消</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="learnModal" style="display: none;">
+  <div class="modal">
+    <h3>🧠 学习别名</h3>
+    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">装车单写 "<b id="learnRawLabel"></b>"，对应模板哪个产品？</div>
+    <input type="text" id="learnInput" placeholder="搜产品名..." style="width:100%;padding:10px;border:1px solid rgba(0,212,255,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px;margin:4px 0" autocomplete="off" oninput="filterLearnList()" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmLearn();}" onblur="setTimeout(()=&gt;{const d=document.getElementById('learnDropdown');if(d&amp;&amp;!d.matches(':hover'))d.style.display='none';},150)">
+    <div id="learnDropdown" style="display: none; max-height: 200px; overflow-y: auto; border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 6px; background: rgba(8, 12, 20, 0.95); margin: 2px 0px;"><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('EP28S')">EP28S</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('6828黑')">6828黑</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('6828')">6828</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('DG一28')">DG一28</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('28MM內格')">28MM內格</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('280 8安花紙杯')">280 8安花紙杯</div></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-primary" onclick="confirmLearn()">匹配产品</button>
+      <button class="btn btn-sm" style="background:var(--rose-light);color:var(--rose);border:1px solid rgba(244,63,94,.3)" onclick="learnExclude()">🚫 不报关</button>
+      <button class="btn btn-sm btn-ghost" onclick="closeLearn()">取消</button>
+    </div>
+  </div>
+</div>
+	<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" onerror="window.__exceljsFailed=true;console.warn('exceljs CDN failed, using SheetJS fallback')"></script>
+<script>
+(function(){if(typeof CSS==='undefined'||typeof Promise==='undefined'){document.body.innerHTML='<div style="padding:40px;text-align:center;color:#fff;font-size:18px;background:#080c14;min-height:100vh;display:flex;align-items:center;justify-content:center"><div>请使用Chrome/Edge/Safari浏览器访问此页面</div></div>';}})();
+
+
+const ALIAS = {
+  'DG11':'DG-11透','DG11透':'DG-11透','DG11透明':'DG-11透','DG11白':'DG-11白','DG11黑':'DG-11透','DG-11':'DG-11透','DG-11黑':'DG-11透',
+  'DG23':'DG一23','DG-23':'DG一23','DG23透':'DG一23','DG-23透':'DG一23','DG23黑':'DG一23','DG-23黑':'DG一23',
+  'DG23白':'DG一23','DG-23白':'DG一23',
+  'DG28':'DG一28','DG-28':'DG一28','DG28透':'DG一28','DG-28透':'DG一28','DG28黑':'DG一28','DG-28黑':'DG一28',
+  'DG28白':'DG一28','DG-28白':'DG一28',
+  'LS55':'LS一55透','LS-55':'LS一55透','LS55透':'LS一55透','LS-55透':'LS一55透',  // 默认200装（按规则）
+  'LS55白':'LS一55白','LS-55白':'LS一55白','LS55白色':'LS一55白',
+  'LS55(150)':'LS一55','LS55(150装)':'LS一55','LS55(150箱)':'LS一55',  // 150装（非透明）
+  'LS55(200)':'LS一55透','LS55(200装)':'LS一55透','LS55(200箱)':'LS一55透',
+  'LS2A':'LS一2A','LS-2A':'LS一2A','LSa2白':'LS一2A','LSa2白色':'LS一2A','LA2白':'LS一2A','LA2白色':'LS一2A','LA2':'LS一2A',
+  'DGT8':'DGT8','DG-T8':'DGT8','TS-T8':'DGT8','T8':'DGT8',
+  'LS55A白':'LS55A白',
+  '16安碗':'H16碗','16碗':'H16碗','16安盖':'H12-16碗蓋','16盖':'H12-16碗蓋','16蓋':'H12-16碗蓋','16安蓋':'H12-16碗蓋',
+  '12安纸杯':'250 8安花紙杯','12安凍紙杯':'250 8安花紙杯',
+  '1300沙拉碗':'35安紙碗','1300纸碗':'35安紙碗',
+  'PP热盖':'H12-16碗蓋','PP蓋':'H12-16碗蓋','PP热蓋':'H12-16碗蓋','PP熱蓋':'H12-16碗蓋','pp熱蓋':'H12-16碗蓋','Pp熱蓋':'H12-16碗蓋','80PP盖':'H12-16碗蓋','80PP熱蓋':'H12-16碗蓋','80PP凍蓋':'H12-16碗蓋','80PP冻盖':'H12-16碗蓋',
+  '24透':'H24碗','12透':'H12碗','16透':'H16碗','20透':'H20碗','30透':'H30碗',
+  '1-2安甘蔗盖':'1-2安甘蔗杯','6828盖':'盒蓋','盒盖':'盒蓋','合蓋':'盒蓋','合盖':'盒蓋',
+  'F1000美透':'1000美透','容750':'容海500','容1000':'興明發500底',
+  '中更':'甘蔗中更','饭更':'甘蔗中更','紙更':'甘蔗中更','甘蔗中更':'甘蔗中更','甘蔗饭更':'甘蔗中更','甘蔗飯更':'甘蔗中更','160木更':'甘蔗中更',
+  'HS1350黑碗':'Y1350碗','HS1200黑碗':'Y1200碗','HS1200透碗':'Y1200碗','HSY1200透碗':'Y1200碗','Y1200黑碗':'Y1200碗','HS700黑碗':'Y1200碗','HSY1100黑碗':'Y1200碗',
+  'x11':'H500','银桥X11':'X11','銀橋X11':'X11','银桥X-11':'X11',
+  'HS450透碗':'HS500圓盒','HS750美透':'HS1000方盒','白24PP碗':'H24白碗','24PP白碗':'H24白碗',
+  '30PP碗':'H30碗','30PP':'H30碗',
+  '12-16PP碗盖':'H12-16碗蓋','12-16PP碗蓋':'H12-16碗蓋','12-16PP盖':'H12-16碗蓋',
+  '12-16蓋':'H12-16碗蓋','12-16盖':'H12-16碗蓋','12蓋':'H12-16碗蓋','12盖':'H12-16碗蓋',
+  '16蓋':'H12-16碗蓋','16盖':'H12-16碗蓋','24蓋':'H24-30碗蓋','24盖':'H24-30碗蓋','30蓋':'H24-30碗蓋','30盖':'H24-30碗蓋',
+  '24-30PP盖':'H24-30碗蓋','24-30PP碗盖':'H24-30碗蓋','24-30PP碗蓋':'H24-30碗蓋',
+  '24-30蓋':'H24-30碗蓋','24-30盖':'H24-30碗蓋','2430蓋':'H24-30碗蓋','2430盖':'H24-30碗蓋',
+  '16甘蔗碗':'16安紙碗','冻PP盖':'H12-16碗蓋','凍PP蓋':'H12-16碗蓋','PS涷蓋':'H12-16碗蓋','PS冻盖':'H12-16碗蓋','H16透碗':'H16碗',
+  '兴2000透盆':'興明發1250碗','兴1000碗':'興年華1000碗',
+  'H1100碗+H1500碗':'H1250碗','LS55(150装箱)':'LS一55',
+  '喜运杯':'250 8安花紙杯','美星850盒':'美星750盒','MX700碗':'美星700碗','MX750盒':'美星750盒','MX850盒':'美星750盒','MX1000盒':'美星1000盒',
+  '兴1500美透':'興年華1500美式','興1500美透':'興年華1500美式','雄1500美透':'興年華1500美式',
+  '30碗白':'H30白碗','24碗白':'H24白碗','24-30安盖':'H24-30碗蓋','24-30安蓋':'H24-30碗蓋',
+  'EP55':'EP55','EP33':'EP33','EP28S':'EP28S','EP88':'EP88',
+  'H-1250碗':'H1250碗','H-1250碗透':'H1250碗','H-1250碗盖':'H1250碗蓋','H-1500碗':'H1250碗','H-1500碗透':'H1250碗','6828(无黑字)':'6828','6828透':'6828','6828黑色':'6828黑','6828黑':'6828黑',
+  '美星50碗':'美星450碗','美星450碗':'H16碗','快1000透碗':'興年華1000碗','1000透碗底':'1000美透','兴1000碗透':'1000美透','興1000碗透':'1000美透',
+  '30-35纸碗盖':'H24-30碗蓋',
+  '三散':'6*197 三層紙飲管','6*197三散':'6*197 三層紙飲管',
+  'la2白色':'LS一2A','LA2':'LS一2A','LA2白':'LS一2A','LS11白色':'DG-11白',
+  'H1250黑碗':'H1250碗','H1250透碗':'H1250碗','H1250白碗':'H1250白碗','H1250透':'H1250碗','H1250黑':'H1250碗','H1250白':'H1250白碗',
+  'H1000透碗':'H1000','H1100碗':'H1000','H-1100碗':'H1000','H1500透碗':'H1500碗','H1500黑碗':'H1500碗','H1500碗':'H1250碗','H-1500碗':'H1250碗','1500白碗':'H1250白碗','HS3000白碗':'HS1750碗',
+  'H500':'H500','H500透碗':'H500','H500方':'H500','500盒':'H500',
+  'H1100透碗':'H1100碗','H1100黑碗':'H1100碗','1100透碗':'H1250碗','HS1100透碗':'Y1200碗',
+  // 碗类颜色变体：H12/H16/H20/H24/H30
+  'H12透碗':'H12碗','H12黑碗':'H12碗','H16透碗':'H16碗','H16黑碗':'H16碗',
+  'H20透碗':'H20碗','H20黑碗':'H20碗','H20碗':'H24碗','H-20碗':'H24碗','H24透碗':'H24碗','H24黑碗':'H24碗',
+  'H30透碗':'H30碗','H30黑碗':'H30碗',
+  // 碗类白色变体（装车单习惯"H30碗白"→H30白碗）
+  'H30碗白':'H30白碗','H24碗白':'H24白碗','H16碗白':'H16白碗','H12碗白':'H12白碗','H20碗白':'H20白碗',
+  'H12碗透':'H12碗','H16碗透':'H16碗','H24碗透':'H24碗','H30碗透':'H30碗','H20碗透':'H24碗','H12碗黑':'H12碗','H16碗黑':'H16碗','H24碗黑':'H24碗','H30碗黑':'H30碗','H20碗黑':'H24碗','H12碗黑色':'H12碗','H16碗黑色':'H16碗','H24碗黑色':'H24碗','H30碗黑色':'H30碗','H20碗黑色':'H24碗','H12碗白色':'H12白碗','H16碗白色':'H16白碗','H24碗白色':'H24白碗','H30碗白色':'H30白碗','H20碗白色':'H24白碗',
+  '兴1250黑碗':'興明發1250黑碗','兴1250透碗':'興明發1250碗','兴999黑碗':'興年華999黑碗','兴142盖':'興年華142蓋','興1250透直碗':'興明發1250碗',
+  'He1500美式':'Hs1500美式','He2000美式':'Hs2000美式','Hs2000美式底':'Hs2000美式',
+  'HS内格':'HS內格','HS三格圆':'HS三格圓',
+  '172PP盖':'172‌PP蓋','172pp蓋':'172‌PP蓋','172pp盖':'172‌PP蓋',
+  '28MM内格':'28MM內格','绿保康142':'綠保康142 3.5內格',
+  '28內格':'28MM內格','28内格':'28MM內格','28內隔':'28MM內格',
+  '12透碗':'H12碗','16透碗':'H16碗','20透碗':'H20碗','24透碗':'H24碗','30透碗':'H30碗',
+  '12透':'H12碗','16透':'H16碗','16黑碗':'H16碗','20透':'H20碗','24透':'H24碗','30透':'H30碗',
+  '24安白色':'H24白碗','24安透':'H24碗','24安':'H24碗',
+
+  '16白色':'H16白碗','30白色':'H30白碗','白30碗':'H30白碗','30白碗':'H30白碗','20白碗':'H24白碗',
+  '1250':'H1250碗','1250蓋':'H1250碗蓋','1250盖':'H1250碗蓋','1250透':'H1250碗','1250白':'H1250白碗','1250黑':'H1250碗','1250黑色':'H1250碗','1250白色':'H1250白碗','1250透碗':'H1250碗',
+  '24白':'H24白碗','24白碗':'H24白碗','白色1250':'H1250白碗',
+  '美1000':'1000美透','美1000透':'1000美透','美1000白':'1000美透','1000美':'1000美透','1000美白':'1000美透','美1000黑':'1000美黑','1000美黑':'1000美黑','黑美1000':'1000美黑','1000美黑色':'1000美黑','1000黑底':'1000美黑',
+  'HS1100黑碗':'HS1000+',
+  '1813白碟加厚':'28MM內格','1813黑碟加厚100條裝':'28MM內格','1813 白碟加厚':'28MM內格','1813 黑碟加厚':'28MM內格',
+  '6*197三美散':'6*197 三層紙飲管','6*197美散':'6*197 三層紙飲管',
+  '7*197四紙包':'7*197四層獨立紙包','7*197四吸管':'7*197 四層紙飲管',
+  '7*197纸包':'7*197四層獨立紙包','7*197吸管':'7*197 四層紙飲管',
+  '7寸甘蔗圆碟(加厚)':'7"甘蔗圓碟(加厚)','7寸甘蔗圆碟':'7"甘蔗圓碟',
+  '9甘蔗碟':'9"甘蔗圓碟','9 甘蔗碟':'9"甘蔗圓碟','9吋甘蔗圓碟':'9"甘蔗圓碟','9寸甘蔗圆碟':'9"甘蔗圓碟','9 甘蔗圓碟':'9"甘蔗圓碟','7甘蔗碟':'7"甘蔗圓碟','7 甘蔗碟':'7"甘蔗圓碟','7 加厚甘蔗圓碟':'7"甘蔗圓碟(加厚)',
+  '10甘蔗碟':'10"甘蔗圓碟','10 甘蔗碟':'10"甘蔗圓碟',
+  '10寸甘蔗圆碟':'10"甘蔗圓碟','9寸甘蔗圆碟':'9"甘蔗圓碟',
+  '2安甘蔗杯盖':'2安甘蔗杯蓋','4安甘蔗杯盖':'4安甘蔗杯蓋',
+  '小旦碟':'小旦碟','7.5寸甘蔗旦碟':'7.5"甘蔗旦碟',
+  '9寸甘蔗三格圆碟':'9"甘蔗三格圓碟','8安甘蔗盖':'8安甘蔗蓋',
+  '1000甘蔗盒盖':'1000甘蔗盒盖','6寸甘蔗旦碟':'6"甘蔗旦碟',
+  '280花纸杯':'280 8安花紙杯','250花纸杯':'250 8安花紙杯','250花杯':'250 8安花紙杯',
+  '热杯250g':'250 8安花紙杯','250花热杯':'250 8安花紙杯',
+  '6*197三层纸吸管':'6*197 三層紙飲管','6*197三层独立纸包':'6*197三層獨立紙包',
+  '6*197四层纸吸管':'6*197 四層紙飲管','6*197四层独立纸包':'6*197四層獨立紙包',
+  '6*197四散':'6*197 四層紙飲管','6*197四紙包':'6*197四層獨立紙包',
+  '7*197四层纸吸管':'7*197 四層紙飲管','7*197四层独立纸包':'7*197四層獨立紙包',
+  '7*197四散':'7*197 四層紙飲管','7*197四紙包':'7*197四層獨立紙包','7 *197 獨立包裝':'7*197四層獨立紙包',
+  '12*197三层纸吸管':'12*197 三層紙飲管','12*197四层纸吸管':'12*197 四層紙飲管',
+  '12*197四层独立纸包':'12*197四層獨立紙包',
+  '纸更':'甘蔗中更','1000纸盖':'172紙蓋','韩盛P1酱杯':'HS1安杯','韓盛P1醬杯':'HS1安杯',
+  '1250碗':'H1250碗','1250碗白':'H1250白碗','1250碗黑':'H1250碗','1250碗透':'H1250碗','1250蓋':'H1250碗蓋','1250盖':'H1250碗蓋',
+  'HS1500透碗':'HS1500碗','Hs1500透碗':'HS1500碗','hs1500透碗':'HS1500碗',
+  'HS1500碗':'HS1500碗','Hs1500碗':'HS1500碗',
+  'HS1500':'HS1500碗','Hs1500':'HS1500碗',
+  'HS1200':'Y1200碗','Hs1200':'Y1200碗','HS1200透':'Y1200碗','HS1200透碗':'Y1200碗',
+  'HS1350':'Y1350碗','Hs1350':'Y1350碗','HS1350透':'Y1350碗',
+  'HS1750':'HS1750碗','Hs1750':'HS1750碗',
+  'HS1000':'HS1000碗','Hs1000':'HS1000碗','HS1000透明美式':'HS1000+','HS1000透方盒':'HS1000方盒',
+  'HS142高蓋':'HS142蓋','HS142高盖':'HS142蓋',
+  '1250內隔':'HS內格','1250内格':'HS內格',
+  '28内格':'28MM內格',
+  // 6*197/12*197系列吸管（*嵌入产品名，兼容«»有无空格）
+  '6*197三層散吸管':'6*197 三層紙飲管','6*197三层散吸管':'6*197 三層紙飲管',
+  '6*197三層 散 吸管':'6*197 三層紙飲管','6*197三层 散 吸管':'6*197 三層紙飲管',
+  '12*197四层吸管':'12*197 四層紙飲管','12*230(4)':'12*197 四層紙飲管','12*230(4)cut':'12*197 四層紙飲管',
+  // X→* 别名 + 全名（用户常用大写X代替*）
+  '6X197':'6*197 三層紙飲管','6x197':'6*197 三層紙飲管','12X197':'12*197 四層紙飲管','12x197':'12*197 四層紙飲管',
+  '6X197 3層 吸管':'6*197 三層紙飲管','6x197 3层 吸管':'6*197 三層紙飲管',
+  '12X197 4層 吸管':'12*197 四層紙飲管','12x197 4层 吸管':'12*197 四層紙飲管',
+  '12*197 四層 吸管':'12*197 四層紙飲管','12*197 四层 吸管':'12*197 四層紙飲管',
+  '6*197「散」吸管':'6*197 三層紙飲管','6*197「散」吸管 散装':'6*197 三層紙飲管',
+  // X→* 清洗后含空格兜底（cleanText将*197→X197，数字后的*受保护不再转换，此为安全网）
+  '6 X197四散':'6*197 四層紙飲管','6 X197四紙包':'6*197四層獨立紙包',
+  '7 X197四散':'7*197 四層紙飲管','7 X197四紙包':'7*197四層獨立紙包',
+  '12 X197四散':'12*197 四層紙飲管','12 X197四紙包':'12*197四層獨立紙包',
+  '10寸三格碟':'10"甘蔗三格圓碟','12x197三层散':'6*197 三層紙飲管',
+  '12PP碗':'H12碗','12PP':'H12碗','16PP碗':'H16碗','16PP':'H16碗',
+  '24PP碗':'H24碗','24PP':'H24碗','30PP碗':'H30碗','30PP':'H30碗',
+  '12-16PP蓋':'H12-16碗蓋','12-16PP':'H12-16碗蓋',
+  '24-30PP蓋':'H24-30碗蓋','24-30PP':'H24-30碗蓋',
+  '142蓋':'興年華142蓋','142':'興年華142蓋',
+  '興1000碗':'興年華1000碗','兴1000碗':'興年華1000碗',
+  '白色12PP碗':'H12白碗','白色16PP碗':'H16白碗','白色24PP碗':'H24白碗','白色30PP碗':'H30白碗',
+  '黑16PP碗':'H16碗','黑30PP碗':'H30碗',
+  '30蓋':'H24-30碗蓋','1250蓋':'H1250碗蓋','1250盖':'H1250碗蓋',
+  '12碗':'H12碗','16碗':'H16碗','20碗':'H20碗','24碗':'H24碗','30碗':'H30碗',
+  '30碗透':'H30碗','24碗透':'H24碗',
+  '1250碗':'H1250碗',
+  '白色12碗':'H12白碗','白色16碗':'H16白碗','白色24碗':'H24白碗','白色30碗':'H30白碗','白色底30碗':'H30白碗',
+  '白色1250碗':'H1250白碗','白色H-1250碗':'H1250白碗',
+  '甘蔗碟7寸圓碟':'7"甘蔗圓碟','甘蔗碗16安':'16安紙碗',
+  '甘蔗蛋碟7.5x10':'7.5"甘蔗旦碟','甘蔗蛋碟7.5x10"':'7.5"甘蔗旦碟','甘蔗圓碟':'9"甘蔗圓碟','加厚甘蔗圓碟':'7"甘蔗圓碟(加厚)',
+  '500ml盒':'580紙盒','750ml盒':'750紙盒','1000ml盒':'1000紙盒','650ml盒':'580紙盒',
+  '500-1000ml 蓋':'172紙蓋','500-1000ml蓋':'172紙蓋',
+  '6口徑白色6*197三層':'6*197 三層紙飲管','6口徑6*197三層':'6*197 三層紙飲管',
+  '6*197三層紙包':'6*197 三層紙飲管',
+  '12*200四層斜口紙包':'12*197 四層紙飲管',
+  // ---- 以下装车单常用别名（对齐SKILL.md） ----
+  '80PP蓋':'H12-16碗蓋','80PP盖':'H12-16碗蓋',
+  '12-16紙碗蓋':'H12-16碗蓋','12-16纸碗盖':'H12-16碗蓋',
+  '方盒蓋':'盒蓋','方盒盖':'盒蓋','興明發蓋':'盒蓋','兴明发盖':'盒蓋',
+  '16(白)':'H16白碗',
+  'LS-55(白色)':'LS一55白',
+  '16紙碗':'16安紙碗','16纸碗':'16安紙碗','16白紙碗':'16安紙碗','12紙碗':'12安紙碗','12纸碗':'12安紙碗','12白紙碗':'12安紙碗','12安白紙碗':'12安紙碗','20安紙碗':'30安紙碗','35安啡紙碗':'35安紙碗',
+  '紙吸管':'6*197 三層紙飲管',
+  '8安紙杯':'250 8安花紙杯','8安纸杯':'250 8安花紙杯',
+  '16安啡紙碗':'16安紙碗','30啡紙碗':'30安紙碗',
+  '1000紙蓋':'172紙蓋','1000纸盖':'172紙蓋',
+  '1000方紙盒':'1000紙盒','長方750紙盒':'750紙盒',
+  '850蓋':'850蓋','850盖':'850蓋',
+  '500-1000ml 蓋':'盒蓋','500-1000ml盖':'盒蓋',
+  '22安紙碗':'22安紙碗','22安纸碗':'22安紙碗',
+  '1安甘蔗杯':'1安甘蔗杯','2安甘蔗杯':'2安甘蔗杯',
+  'HS4安杯':'HS3安杯','HS4安杯(替代)':'HS3安杯',
+  '1000碗(透明)':'H1000','1000碗（透明）':'H1000',
+  '1813黑碟加厚100條裝':'28MM內格',
+  '12安紙杯':'250 8安花紙杯',
+
+  // ---- WDK系列→1000美透代替报关 ----
+  'WDK500':'1000美透','WDK650':'1000美透','WDK750':'1000美透','WDK1000':'1000美黑',
+  // ---- 快乐系列→1000美黑代替报关 ----
+  '快快樂1000美式':'1000美黑','快樂1000美式':'1000美黑',
+  '快快樂1200美式':'1000美黑','快樂1200美式':'1000美黑',
+  '快快樂1000碗':'1000美黑','快樂1000碗':'1000美黑',
+  // ---- T系列（茂盈）→28MM內格代替报关 ----
+  'T34':'28MM內格','T36':'28MM內格','T38':'28MM內格','T316':'28MM內格','茂盈':'1000美黑',
+  // ---- 经典装车单别名（全量迁移自SKILL.md） ----
+  '容500盒':'容海500','容500':'容海500',
+  '美式1000黑色':'1000美黑','美式1000透明':'1000美透','美式1000黑':'1000美黑','美式1000透':'1000美透','美式1000':'1000美透',
+  '250花熱杯':'250 8安花紙杯','250花热杯':'250 8安花紙杯',
+  'X-11':'X11',
+  'HS1200':'Y1200碗','HS1200黑碗':'Y1200碗',
+  '12x197 3層散':'6*197 三層紙飲管','12x197 3层散':'6*197 三層紙飲管',
+  '興1750黑碗':'HS1750碗','兴1750黑碗':'HS1750碗',
+  // ---- 深港21第二車缺失项 ----
+  'HSY1200黑碗':'Y1200碗','Y1350黑碗':'Y1350碗',
+  '興999黑碗':'興年華999黑碗',
+  '興1250透碗':'興明發1250碗','興1250黑碗':'興明發1250黑碗',
+  '6 197 三 散':'6*197 三層紙飲管','6 197 三散':'6*197 三層紙飲管',
+  // ---- 装车单缩写别名 ----
+  'HS1500美黑':'Hs1500美式','HS1500美透':'Hs1500美式','HS1500美式黑':'Hs1500美式','HS1500美式白':'Hs1500美式',
+  'HS2000美黑':'Hs2000美式','HS2000美透':'Hs2000美式','HS2000美式黑':'Hs2000美式',
+  'HS1000美黑':'1000美黑','HS1000美透':'1000美透',
+  'HS1250美黑':'HS1250美式','HS1250美透':'HS1250美式','HS1250美式黑':'HS1250美式',
+  // 美星系列缩写
+  'MX1000':'美星1000盒','MX750':'美星750盒','MX450':'美星450碗','Mx800':'Mx800',
+  'MX三格':'美星三格盒','MX四格':'美星四格',
+  // 中央化学缩写
+  'CTP115':'CTP115盒','CTP115蓋':'CTP115蓋','L1红黑':'L1红黑三格','L1红黑三格':'L1红黑三格',
+  // 韩盛HS系列缩写
+  'HS5安杯':'HS1安杯','HS5安':'HS1安杯',
+  // 装车单特殊格式：HS1500美 黑（「黑」被转成空格）
+  'HS1500美 黑':'Hs1500美式','HS1500美 黑 ':'Hs1500美式',
+  'HS450透碗':'HS500圓盒',
+
+  // ---- 2026-06-08 新增别名 ----
+  '8安250杯':'250 8安花紙杯',
+  '興142蓋':'興年華142蓋','興142盖':'興年華142蓋',
+  '6*197三層 散':'6*197 三層紙飲管','6*197三层 散':'6*197 三層紙飲管',
+
+  '500ml蓋':'盒蓋','1000ml蓋':'盒蓋','500ml盖':'盒蓋','1000ml盖':'盒蓋',
+  'HS999碗':'Y1200碗',
+  '1216蓋':'H12-16碗蓋','1216盖':'H12-16碗蓋',
+  '1500透碗':'H1500碗',
+  '750盒':'H750','750 盒':'H750',
+};
+(function(){const seen={};for(const k of Object.keys(ALIAS)){if(seen[k])console.warn('ALIAS重复定义:',k,'→',seen[k],'和',ALIAS[k]);seen[k]=ALIAS[k];}})();
+const SPEC_MAP = {
+  '塑料餐具：飯盒':['10×2','12×6','15×2'],
+  '塑料飯盒蓋':['10×2','12×2'],
+  '塑料餐具：碗':['4','8','16','24','30'],
+  '塑料餐具：杯':['4','8'],
+  '塑料碗蓋':['8×2','12×2','24×2'],
+  '塑料餐具：碟':['12×8','15×8','28'],
+  '發泡膠餐具：碟':['12×8','15×8','28'],
+  '塑料制品：塑料餐盒':['10×2','12×6'],
+  '塑料制品：塑料餐盒蓋':['10×2','12×2'],
+  '紙餐具：碗':['4','8','12','16'],
+  '紙餐具：杯':['8','4'],
+  '紙餐具：碟':['7','10'],
+  '紙餐具：飯盒蓋':['10×2'],
+  '紙餐具：飯盒':['10×2'],
+  '紙吸管':['6×197'],
+  '紙餐具：中更':['125'],
+  '塑料碗':['4','8'],
+};
+const COUNT_MAP={1:'一種',2:'两種'};
+function cntStr(n){return COUNT_MAP[n]||'多種';}
+const EXCLUDE = ['X-04','X-11','X-18','X-23','X-28','X-66','X23A','X25','X66','X56',
+  'CH11','CH18','CH19','CH23','CH28','CH55A','HK11','HK21','HK23','HK28','HK66',
+  'L-03','L23','L50','L28X','L55','L-50','G12A','G50','M1','M-1','N750',
+  '330樽','600樽','750樽','KS102X','C-55','C55','C-12A','银桥1200透明','必事利','3012碟','中一深帶扣','中一深带扣','新中一深S1','特一深',
+  '1000甘蔗盒','1000甘蔗盒盖','F25','LBK999白','LBK700','LBK142','LBK','白LBK'];
+const ORIGIN = {
+  '汕頭韓盛':'汕頭','深圳興明發':'深圳','東莞茂盈':'東莞','東莞中央化學':'東莞',
+  '台山長江':'台山','東莞美星':'東莞','河南海翔新材料科技有限公司':'河南周口',
+  '大江環保':'惠州','韶能集团绿洲生态(新丰)科技有限公司':'韶關',
+  '江苏金晟环保餐具有限公司':'江苏宿遷','青橄榄环保科技（东莞）有限公司':'東莞',
+  '旺盟(上海)新材料科技有限公司':'上海','浙江福昌环保科技有限公司':'浙江省兰溪市',
+  '溫洲捷弗瑞材料有限公司':'溫洲','溧洲捷弗瑞材料有限公司':'溧洲',
+  '江苏徐洲青青紙制品':'江苏徐州','河北稻香环保科技有限公司':'河北邢台',
+};
+function getBrand(n,supplier,row){
+  if(!n)return null;
+  if(row!==undefined && row>=4 && row<=64){
+    if(supplier){
+      if(supplier.includes('韓盛')||supplier.includes('韩盛'))return '韓盛';
+      if(supplier.includes('中央化學')||supplier.includes('中央化学'))return '中央';
+      if(supplier.includes('美星'))return '美星';
+      if(supplier.includes('長江')||supplier.includes('长江'))return 'LR';
+      if(supplier.includes('茂盈'))return null;
+      if(supplier.includes('海翔')||supplier.includes('兆盈'))return null;
+      if(supplier.includes('金晟')||supplier.includes('捷弗瑞')||supplier.includes('青青')||supplier.includes('稻香')||supplier.includes('旺盟'))return null;
+      if(supplier.includes('大江'))return null;
+      if(supplier.includes('韶能'))return null;
+      if(supplier.includes('福昌'))return null;
+      if(supplier.includes('興明發')||supplier.includes('兴明发')){
+        if(n.includes('容海')||n.includes('容海'))return '容海';
+        if(n.includes('騰輝')||n.includes('腾辉'))return '騰輝';
+        if(n.includes('興年華')||n.includes('兴年华'))return '興年華';
+        return '興明發';
+      }
+    }
+    if(n.includes('韓盛')||/^[YH]S/.test(n)||/^Y\d/.test(n))return '韓盛';
+    if(n.includes('中央')||n.includes('CTP'))return '中央';
+    if(n.includes('容海'))return '容海';
+    if(n.includes('興年華')||n.includes('兴年华'))return '興年華';
+    if(n.includes('興明發')||n.includes('兴明发'))return '興明發';
+    if(n.includes('騰輝')||n.includes('腾辉'))return '騰輝';
+    if(n.includes('美星'))return '美星';
+    if(n.includes('LR')||n.includes('EP'))return 'LR';
+  }
+  return null;
+}
+let templateWB=null,templateProducts=[],templateFileName='',matchedItems=[],unmatchedItems=[],excludedItems=[],imgBase64='',carNo='',carTrip=0,carNoCustomer='';
+const CAR_NO = ['19','21','67'];
+const CUSTOMERS = [
+  '奥加','奧加','百利','宝时','寶時','必事利',
+  '金利华','金利華','金兴','金興','供应易','供應易',
+  '光华','光華','合利','和兴','和興',
+  '花丽行','花麗行','建国','建國','新禧',
+  '俊福','坤兴','坤興','利丰','利豐','利来','利來',
+  '默认客户','默認客戶','深港','安達','安达','利來','利来',
+  '天九','达业','達業','斌利','伟祥','偉祥','伟业','偉業',
+  '兴隆','興隆','裕隆','意佳','永佳','景新','俊禧','意华','意華',
+];
+
+/* ===== 多车次Tab管理 ===== */
+let tabs=[],currentTabIdx=0;
+function initCarTabs(){
+  const saved=localStorage.getItem('v61car_tabs');
+  if(saved){try{tabs=JSON.parse(saved)}catch(e){tabs=[]}}
+  if(tabs.length===0){tabs.push({name:'车次 A',st:'new',txt:'',carNo:'',carTrip:0,cust:'',m:[],u:[],e:[],manual:[],img:''})}
+  for(const t of tabs){t.m=t.m||[];t.u=t.u||[];t.e=t.e||[];t.manual=t.manual||[];t.carNo=t.carNo||'';t.carTrip=t.carTrip||0;t.cust=t.cust||'';t.txt=t.txt||'';t.img=t.img||'';if(!t.st)t.st='new'}
+  saveCarTabs();renderCarTabs();
+}
+function saveCarTabs(){try{localStorage.setItem('v61car_tabs',JSON.stringify(tabs))}catch(e){}}
+function saveCarState(){
+  const t=tabs[currentTabIdx];if(!t)return;
+  t.txt=document.getElementById('inputText').value.trim();
+  t.carNo=carNo;t.carTrip=carTrip;t.cust=carNoCustomer;
+  t.m=JSON.parse(JSON.stringify(matchedItems));
+  t.u=JSON.parse(JSON.stringify(unmatchedItems));
+  t.e=JSON.parse(JSON.stringify(excludedItems));
+  t.manual=JSON.parse(JSON.stringify(manualItems));
+  t.img=imgBase64;
+  t.st=t.m.length>0||t.txt?'edit':'new';
+  saveCarTabs();renderCarTabs();
+}
+function loadCarState(){
+  const t=tabs[currentTabIdx];if(!t)return;
+  carNo=t.carNo||'';carTrip=t.carTrip||0;carNoCustomer=t.cust||'';
+  matchedItems=t.m||[];unmatchedItems=t.u||[];excludedItems=t.e||[];
+  manualItems=t.manual||[];
+  imgBase64=t.img||'';
+  document.getElementById('inputText').value=t.txt||'';
+  if(carNo){
+    document.getElementById('carNoBar').style.display='block';
+    document.getElementById('carNoText').textContent=carNo+(carTrip>1?(' - 第'+carTrip+'车'):'');
+    document.getElementById('carNoCustomer').textContent=carNoCustomer||'';
+  }else{document.getElementById('carNoBar').style.display='none';}
+  document.getElementById('imgPreview').style.display='none';document.getElementById('previewImg').src='';
+  document.getElementById('resultCard').style.display='none';
+  if(matchedItems.length>0)renderMatch(matchedItems,unmatchedItems,excludedItems);
+  else document.getElementById('matchCard').style.display='none';
+  renderManual();
+}
+function switchCarTab(idx){
+  if(idx===currentTabIdx)return;
+  saveCarState();currentTabIdx=idx;loadCarState();renderCarTabs();
+}
+function addCarTab(){
+  tabs.push({name:'\u8F66\u6B21 '+(tabs.length<26?String.fromCharCode(65+tabs.length):String(tabs.length+1)),st:'new',txt:'',carNo:'',carTrip:0,cust:'',m:[],u:[],e:[],manual:[],img:''});
+  saveCarTabs();switchCarTab(tabs.length-1);
+}
+function delCarTab(idx,ev){ev.stopPropagation();
+  if(tabs.length<=1){alert('至少保留一个车次');return;}
+  if(!confirm('删除 "'+tabs[idx].name+'"？数据不可恢复'))return;
+  tabs.splice(idx,1);if(idx<currentTabIdx)currentTabIdx--;else if(currentTabIdx>=tabs.length)currentTabIdx=tabs.length-1;
+  saveCarTabs();renderCarTabs();loadCarState();
+}
+function renameCarTab(idx,el){
+  const old=tabs[idx].name;
+  const inp=document.createElement('input');inp.className='tabs-ren';inp.value=old;
+  el.innerHTML='';el.appendChild(inp);inp.focus();inp.select();
+  inp.onblur=function(){tabs[idx].name=inp.value.trim()||old;saveCarTabs();renderCarTabs();};
+  inp.onkeydown=function(e){if(e.key==='Enter'){tabs[idx].name=inp.value.trim()||old;saveCarTabs();renderCarTabs();}};
+}
+function renderCarTabs(){ // TODO: 增量更新优化，当前Tab数量<10，重建开销可忽略
+  const bar=document.getElementById('carTabsBar');let h='';
+  for(let i=0;i<tabs.length;i++){
+    const t=tabs[i],cls=i===currentTabIdx?' active':'';
+    const dotCls=t.st==='done'?' done':t.st==='edit'?' edit':' new';
+    h+='<button class="tabs-tab'+cls+'" onclick="switchCarTab('+i+')" ondblclick="renameCarTab('+i+',this)">'+
+      '<span class="tabs-dot'+dotCls+'"></span>'+escHtml(t.name)+
+      '<span class="tabs-del" onclick="delCarTab('+i+',event)">×</span></button>';
+  }
+  h+='<button class="tabs-add" onclick="addCarTab()">+</button>';
+  bar.innerHTML=h;
+}
+/* ===== Tab管理结束 ===== */
+
+// API
+function getApiKey(){return localStorage.getItem('zk')||'';}
+function toggleApiFields(){const p=document.getElementById('apiProvider').value;document.getElementById('deepseekFields').style.display=p==='deepseek'?'block':'none';document.getElementById('glmFields').style.display=p==='glm'?'block':'none';}
+function saveApi(){const k=document.getElementById('apiKey').value.trim();const p=document.getElementById('apiProvider').value;if(k){localStorage.setItem('zk',k);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';const warnEl=document.getElementById('apiWarn');if(!warnEl){const w=document.createElement('div');w.id='apiWarn';w.className='hint';w.style.color='var(--amber)';w.textContent='⚠ Key将以明文存储在浏览器本地，请勿在公共设备上保存';document.getElementById('apiPanel').appendChild(w);}}}
+function getApiProvider(){return localStorage.getItem('ai_provider')||'deepseek';}
+function toggleApi(){const p=document.getElementById('apiPanel');p.style.display=p.style.display==='none'?'block':'none';}
+
+function parseTemplateProducts(ws){
+  const hr=['塑料餐盒','塑料餐盒蓋','塑料餐具飯盒','塑料餐具飯盒蓋','塑料餐具碗','塑料餐具碗蓋','塑料餐具碟','發泡膠餐具碟','紙餐具','紙杯','紙盒','紙碗'];
+  const products=[];
+  // 扫描到最后一个有名称的行为止（V4模板行数已超出183）
+  const maxRow=ws['!ref']?parseInt(ws['!ref'].split(':')[1].replace(/[A-Z]+/,'')):300;
+  for(let r=6;r<=maxRow;r++){
+    const cb=ws[XLSX.utils.encode_cell({c:1,r:r-1})];if(!cb)continue;
+    let n=String(cb.v||'').trim();if(!n||hr.includes(n))continue;
+    const sup=String((ws[XLSX.utils.encode_cell({c:2,r:r-1})]||{}).v||'');
+    const var_=String((ws[XLSX.utils.encode_cell({c:3,r:r-1})]||{}).v||'');
+    const pk=Number((ws[XLSX.utils.encode_cell({c:4,r:r-1})]||{}).v||0);
+    const nw=Number((ws[XLSX.utils.encode_cell({c:5,r:r-1})]||{}).v||0);if(nw<=0)continue;
+    const pr=Number((ws[XLSX.utils.encode_cell({c:8,r:r-1})]||{}).v||0);
+    products.push({name:n,supplier:sup,variety:var_,pack:pk,netWeight:nw,price:pr,row:r});
+  }
+  return products;
+}
+// 加载模板
+function loadTemplate(e){
+  console.log('loadTemplate called',e.target.files);
+  const f=e.target.files[0];if(!f){alert('未选择文件');return;}
+  document.getElementById('templateStatus').innerHTML='<span class="badge badge-blue">加载中...</span>';
+  const r=new FileReader();
+  r.onload=function(ev){
+    try{
+      templateWB=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellStyles:true,cellFormula:true});
+      const ws=templateWB.Sheets['工作表2'];if(!ws)throw new Error('找不到工作表2');
+      templateProducts=parseTemplateProducts(ws);
+      templateFileName=f.name;buildProdAlts();prodListDirty=true;prodAltsDirty=true;
+      if(templateProducts.length===0){document.getElementById('templateStatus').innerHTML='<span class="badge badge-red">模板中未找到有效产品</span>';}
+      else if(templateProducts.length>300){document.getElementById('templateStatus').innerHTML=`<span class="badge badge-yellow">${f.name} / ${templateProducts.length}个产品（产品数较多）</span>`;}
+      else{document.getElementById('templateStatus').innerHTML=`<span class="badge badge-green">${f.name} / ${templateProducts.length}个产品</span>`;}
+      if(ws['!cols']&&!templateWB._colWidths)templateWB._colWidths=JSON.parse(JSON.stringify(ws['!cols']));
+      try{
+        const bytes=new Uint8Array(ev.target.result);
+        if(bytes.length>5*1024*1024){document.getElementById('templateStatus').innerHTML+='<span class="badge badge-yellow" style="margin-left:4px">模板文件过大，无法自动保存</span>';}
+        else{
+          let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
+          localStorage.setItem('savedTemplate',btoa(binary));
+          localStorage.setItem('savedTemplateName',f.name);
+        }
+      }catch(e){console.warn('save template failed',e);document.getElementById('templateStatus').innerHTML+='<span class="badge badge-yellow" style="margin-left:4px">自动保存失败</span>';}
+    }catch(err){document.getElementById('templateStatus').innerHTML=`<span class="badge badge-red">${err.message}</span>`;}
+  };r.readAsArrayBuffer(f);
+}
+
+function switchTab(id){
+  document.querySelectorAll('.tab-bar .tab-item').forEach((t,i)=>{
+    t.classList.toggle('active',(i===0&&id==='text')||(i===1&&id==='image')||(i===2&&id==='manual'));
+  });
+  document.getElementById('tabText').classList.toggle('active',id==='text');
+  document.getElementById('tabImage').classList.toggle('active',id==='image');
+  document.getElementById('tabManual').classList.toggle('active',id==='manual');
+  if(id==='manual'&&imgBase64){
+    document.getElementById('manualPhotoBar').style.display='block';
+    document.getElementById('manualPhotoImg').src=`data:image/jpeg;base64,${imgBase64}`;
+  }
+}
+function onImage(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=function(ev){
+    imgBase64=ev.target.result.split(',')[1];
+    document.getElementById('imgPreview').style.display='block';
+    document.getElementById('previewImg').src=ev.target.result;
+    document.getElementById('manualPhotoBar').style.display='block';
+    document.getElementById('manualPhotoImg').src=ev.target.result;
+    document.getElementById('ocrStatus').innerHTML='<span class="badge badge-green">已选择图片</span>';
+  };
+r.readAsDataURL(f);
+}
+
+// 手动录入模式
+let manualItems=[];
+
+function initManual(){
+  if(templateProducts.length===0){alert('请先上传模板');return false;}
+  return true;
+}
+function onQuickKeydown(e){
+  if(e.key==='Enter'){
+    e.preventDefault();
+    document.getElementById('qQty').focus();
+  }
+}
+function quickAdd(){
+  const name=document.getElementById('qName').value.trim();
+  const qty=parseInt(document.getElementById('qQty').value);
+  if(!name||!qty||qty<1){alert('请输产品名和数量');return;}
+  const prod=matchProduct(name);
+  if(!prod){alert(`未匹配到产品: ${name}`);return;}
+  if(isExcluded(prod.name)){alert(`不报关产品: ${prod.name}`);return;}
+  const exist=manualItems.find(m=>m.product.name===prod.name);
+  if(exist){exist.qty+=qty;}
+  else{manualItems.push({product:prod,qty});}
+  document.getElementById('qName').value='';
+  document.getElementById('qQty').value='';
+  renderManual();
+  document.getElementById('qName').focus();
+}
+function delManual(i){
+  manualItems.splice(i,1);
+  renderManual();
+}
+function renderManual(){
+  const el=document.getElementById('manualList');
+  if(manualItems.length===0){el.innerHTML='<div style="color:#999;padding:8px;text-align:center">暂无产品，搜索添加</div>';document.getElementById('manualTotal').style.display='none';return;}
+  let html='<div class="edit-row header"><span class="name">产品</span><span class="qty">数量</span><span class="del-btn"></span></div>';
+  for(let i=0;i<manualItems.length;i++){
+    const m=manualItems[i];
+    html+=`<div class="edit-row"><span class="name">${i+1}. ${escHtml(m.product.name)}</span><span class="qty">${m.qty}箱</span><span class="del-btn" onclick="delManual(${i})">×</span></div>`;
+  }
+  el.innerHTML=html;
+  const tBox=manualItems.reduce((s,m)=>s+m.qty,0);
+  const tNet=manualItems.reduce((s,m)=>s+(m.product.netWeight||0)*m.qty,0);
+  document.getElementById('manualTotal').style.display='block';
+  document.getElementById('manualTotal').innerHTML=`<b>${manualItems.length}</b>项 · <b>${tBox}</b>箱 · 净重<b>${tNet.toFixed(1)}</b>kg`;
+}
+function clearManual(){
+  manualItems=[];
+  renderManual();
+  document.getElementById('qName').value='';
+  document.getElementById('qQty').value='';
+  document.getElementById('qName').focus();
+}
+function manualToMatch(){
+  if(manualItems.length===0){alert('请先添加产品');return;}
+  matchedItems=manualItems.map(m=>({product:m.product,qty:m.qty,raw:m.product.name}));
+  renderMatch(matchedItems,unmatchedItems,excludedItems);
+  document.getElementById('addName').value='';document.getElementById('addQty').value='';
+  switchTab('text');
+  document.getElementById('matchCard').style.display='block';
+  document.getElementById('matchCard').scrollIntoView({behavior:'smooth'});
+}
+function togglePhotoView(){
+  if(!imgBase64)return;
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer';
+  el.onclick=function(){document.body.removeChild(el);};
+  const img=document.createElement('img');
+  img.src=`data:image/jpeg;base64,${imgBase64}`;
+  img.style.cssText='max-width:95%;max-height:90%;border-radius:4px';
+  el.appendChild(img);
+  const hint=document.createElement('div');
+  hint.style.cssText='position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.6);font-size:13px;background:rgba(0,0,0,.5);padding:4px 16px;border-radius:20px';
+  hint.textContent='点击任意位置关闭';
+  el.appendChild(hint);
+  document.body.appendChild(el);
+}
+
+// 解析装车单 - 纯离线，不调用任何AI
+function parseText(){
+  let text=document.getElementById('inputText').value.trim();
+  if(!text){alert('请先输入装车单文字');return;}
+  const btn=document.getElementById('btnParse');
+  btn.disabled=true;btn.textContent='解析中...';
+  try{
+    const rawLines=text.split('\n').filter(l=>l.trim());
+    const cleaned=cleanText(text);
+    // 不覆写textarea！保持原文，避免二次清洗丢失行数
+    processMatch(cleaned);
+    showDiff(rawLines,cleaned.filter(l=>l.trim()));
+  }catch(e){console.error('parse error',e);alert('装车单解析出错：'+e.message);}
+  btn.disabled=false;btn.textContent='解析装车单';
+}
+
+function showDiff(rawLines,cleanedLines){
+  const panel=document.getElementById('diffPanel'),content=document.getElementById('diffContent');
+  let html='<div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">原文 <b>'+rawLines.length+'</b> 行 → 清洗后 <b>'+cleanedLines.length+'</b> 行</div>';
+  for(let i=0;i<cleanedLines.length;i++){
+    html+='<div style="padding:2px 4px;margin:1px 0;border-radius:3px">'+
+      '<span style="color:var(--text-tertiary);font-family:var(--mono);font-size:10px">'+(i+1)+'.</span> '+
+      '<span style="color:var(--pastel-green-text)">'+escHtml(cleanedLines[i])+'</span></div>';
+  }
+  content.innerHTML=html;
+  panel.style.display='block';
+  if(templateProducts.length>0){
+    const t68=templateProducts.filter(p=>p.name.includes('68'));
+    if(t68.length>0){
+      html+='<div style="font-size:10px;color:#aaa;margin-top:4px;border-top:1px solid #eee;padding-top:4px">模板中68系列: '+t68.map(p=>escHtml(p.name)+' (R'+p.row+')').join(', ')+'</div>';
+    }
+  }
+}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+function cleanText(text){
+  carNo='';carTrip=0;carNoCustomer='';
+  const rawLines=text.split('\n');
+  const first=rawLines[0].trim().replace(/^\*+/,'');
+  let carMatch=first.match(/(?:^|[^\d])(19|21|67)(?:[-\u2010\u2013\u2014]([1-9])|([二三四五六七八九]))?(?=\s|$|[^0-9]*[車车頭头首改头趟]|$)/);
+  let carMatchLine=first;
+  if(!carMatch){
+    for(const ln of rawLines){
+      const tl=ln.trim();
+      if(!tl||CUSTOMERS.includes(tl))continue;
+      const m=tl.match(/(?:^|[^\d])(19|21|67)(?:[-\u2010\u2013\u2014]([1-9])|([二三四五六七八九]))?(?=\s|$|[^0-9]*[車车頭头首改头趟]|$)/);
+      if(m){carMatch=m;carMatchLine=tl;break;}
+    }
+  }
+  if(carMatch){
+    carNo=carMatch[1];
+    // 车次: "19-2"→2, "19二"→2, 无→1
+    if(carMatch[2])carTrip=parseInt(carMatch[2]); // "19-2"格式
+    else if(carMatch[3]){const tripMap={'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};carTrip=tripMap[carMatch[3]]||1;}
+    else carTrip=1;
+    // 自动将Tab名改为车号-车次
+    if(tabs[currentTabIdx]){
+      const newName=carNo+'-'+carTrip;
+      if(!tabs[currentTabIdx].carNo||tabs[currentTabIdx].carNo!==carNo||tabs[currentTabIdx].carTrip!==carTrip){
+        tabs[currentTabIdx].name=newName;
+        saveCarTabs();renderCarTabs();
+      }
+    }
+    const matchIdx=rawLines.findIndex(l=>l.trim()===carMatchLine);
+    const idx=carMatchLine.indexOf(carNo);
+    const before=carMatchLine.substring(0,idx).replace(/[（(][^）)]*[）)]/g,'').trim();
+    if(before&&/^[\u4e00-\u9fff]+/.test(before)){
+      carNoCustomer=before;
+      document.getElementById('carNoBar').style.display='block';
+      document.getElementById('carNoText').textContent=carNo+'-'+carTrip;
+      document.getElementById('carNoCustomer').textContent=carNoCustomer;
+      text=rawLines.slice(matchIdx>=0?matchIdx+1:1).join('\n');
+    }else{
+      document.getElementById('carNoBar').style.display='block';
+      document.getElementById('carNoText').textContent=carNo+'-'+carTrip;
+      document.getElementById('carNoCustomer').textContent='';
+      text=rawLines.slice(matchIdx>=0?matchIdx+1:1).join('\n');
+    }
+  }else{
+    document.getElementById('carNoBar').style.display='none';
+  }
+  return text.split('\n').map(l=>{
+    let s=l.trim();
+    if(!s)return '';
+    if(/^[-=*]{2,}$/.test(s)||/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(s)||/^[a-z]+[/]/.test(s))return '';
+    if(/^[\u4e00-\u9fff]+[:：]$/.test(s))return '';
+    const carSuffix=s.replace(/\s*(19|21|67).*$/,'').trim();
+    if(CUSTOMERS.includes(s)||CUSTOMERS.includes(carSuffix))return '';
+    s=s.replace(/\*(\d+)-(\d+)/g,' X$1').replace(/\*(\d+)-(\d+)/g,' X$1').replace(/\*(\d+\.?\d*)\*/g,' $1 ').replace(/\*(\d+\.?\d*)/g,function(m,num,off,src){return(off>0&&/\d/.test(src[off-1]))?m:(' X'+num);}).replace(/[^a-zA-Z0-9\u4e00-\u9fff\s\-*×\"\/.()（）\[\]【】「」]/g,' ');
+    s=s.replace(/^\*+|\*+$/g,'').trim();
+    let color='';let colorRemovedTransparent=false;
+    const clr=s.replace(/[（(「](白色|白|透明|透|黑色|黑|明)[）)」]/g,function(m,p1){
+      if(p1==='明'||p1==='透明'||p1==='透'){color='';colorRemovedTransparent=true;}
+      else if(p1==='白'||p1==='白色')color='白色';
+      else if(p1==='黑'||p1==='黑色')color='黑';
+      return ' ';
+    }).trim();
+    s=clr;
+    if(colorRemovedTransparent) s=s.replace(/透明/g,'');
+    s=s.replace(/\s+/g,' ').trim();
+    // 提取末尾括号数字作为数量：HS1200透碗（20）→ HS1200透碗 20
+    s=s.replace(/[（(](\d+)[）)]/g,' $1 ');
+    let packMatch=s.match(/[（(]\s*(\d+)\s*(装|箱)[）)]/);
+    s=s.replace(/[（(][^）)]*[）)]/g,' ').trim();
+    if(packMatch){
+      const packSuffix=`(${packMatch[1]}装)`;
+      const spaceIdx=s.indexOf(' ');
+      if(spaceIdx>0)s=s.substring(0,spaceIdx)+packSuffix+s.substring(spaceIdx);
+      else s=s+packSuffix;
+    }
+    s=s.replace(/[「」\[\]【】]/g,'').replace(/[，,、;；:：]/g,' ');
+    s=s.replace(/\s+/g,' ').trim();
+    if(color){
+      if(color==='白色')s=color+s;
+      else if(color==='黑'){
+        const si=s.indexOf(' ');
+        if(si>0)s=s.substring(0,si)+'黑'+s.substring(si);
+        else s=s+'黑';
+      }
+    }
+    let m=s.match(/^(.+)\s+(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?$/);
+    if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;return `${m[1].trim()} ${Math.round(q)}箱`;}
+    m=s.match(/^(.+)\s+(半板|板)$/);
+    if(m){let q=m[2]==='板'?30:15;return `${m[1].trim()} ${q}箱`;}
+    m=s.match(/^(.+?)(\d+\.?\d*)$/);
+    if(m){let q=parseFloat(m[2]);if(q>0)return `${m[1].trim()} ${q}箱`;}
+    m=s.match(/^(.+?)(\d+\.?\d*)(板|半板|箱|件|个)$/);
+    if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;return `${m[1].trim()} ${Math.round(q)}箱`;}
+    m=s.match(/^(.+)\s+(\d+)$/);
+    if(m)return `${m[1].trim()} ${m[2]}箱`;
+    return s;
+  }).filter(Boolean);
+}
+
+async function ocrImage(){
+  if(!imgBase64){alert('请先选择图片');return;}
+  const key=localStorage.getItem('zk');if(!key){alert('请先设置API Key');return;}
+  if(getApiProvider()!=='glm'){alert('OCR功能需要GLM API Key，请在API设置中选择GLM(智谱)并填入Key');return;}
+  document.getElementById('btnOcr').disabled=true;document.getElementById('btnOcr').textContent='识别中...';
+  try{
+    const r=await fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'glm-ocr',file:`data:image/jpeg;base64,${imgBase64}`})});
+    const d=await r.json();if(d.error)throw new Error(JSON.stringify(d.error));
+    let txt='';
+    if(d.layout_details)for(const dt of d.layout_details)if(dt.content)txt+=dt.content.replace(/<[^>]+>/g,' ')+'\n';
+    if(d.markdown_result){
+      const md=d.markdown_result.replace(/[#*\[\]]/g,'');
+      txt=md.replace(/^[\-\+\*]\s+|^\d+\.\s+/gm,'').trim();
+    }
+    if(!txt||!txt.trim()){alert('OCR识别结果为空，请检查图片质量');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
+    document.getElementById('inputText').value = txt.replace(/[|:]/g,' ').replace(/\s+/g,'\n').trim();
+    document.getElementById('ocrStatus').innerHTML='<span class="badge badge-green">OCR 完成</span>';
+    doClean(document.getElementById('inputText').value);
+  }catch(e){
+    const msg=e.message||'';
+    if(msg.includes('401'))alert('OCR失败: GLM API Key无效或已过期\n请点击 API设置，选择 GLM，填入正确的 GLM Key');
+    else alert('OCR失败: '+msg);
+  }
+  document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';
+}
+
+function doClean(text){
+  const rawLines=text.split('\n').filter(l=>l.trim());
+  const cleaned=cleanText(text);
+  // 不覆写textarea！保持原文，避免二次清洗丢失行数
+  processMatch(cleaned);
+  showDiff(rawLines,cleaned.filter(l=>l.trim()));
+}
+
+function processMatch(lines){
+  // lines可以是数组或换行分隔的字符串
+  if(typeof lines==='string')lines=lines.split('\n');
+  let matched=[],unmatched=[],excluded=[];
+  for(const line of lines){
+    const ln=line.trim();if(!ln||/^\d+$/.test(ln))continue;
+    // 樣板/样板行跳过不匹配
+    if(/[樣样]板/.test(ln))continue;
+    const parsed=parseLine(ln);if(!parsed){if(ln){
+      const raw=ln.replace(/\s*(19|21|67).*$/,'').trim();
+      if(!CUSTOMERS.includes(raw)&&!CUSTOMERS.includes(ln))unmatched.push({text:ln});
+    }continue;}
+    if(CUSTOMERS.includes(parsed.name))continue;
+    const prod=matchProduct(parsed.name,ln);
+    if(!prod){
+      if(isNotCustomsName(parsed.name)){excluded.push({name:parsed.name,qty:parsed.qty});continue;}
+      if(isExcluded(parsed.name)){excluded.push({name:parsed.name,qty:parsed.qty});continue;}
+      unmatched.push({text:parsed.name});continue;
+    }
+    if(isExcluded(prod.name)){excluded.push(prod);continue;}
+    // 自动匹配同名不同供应商：装车单含供应商关键词→选对应版本
+    let best=autoMatchSupplier(parsed.name,ln,prod);
+    // H500/H650/H750/H1000/盒蓋 默认供应商改为河南海翔
+    best=forceSupplier(best);
+    matched.push({product:best,qty:parsed.qty,raw:parsed.name});
+  }
+  matchedItems=matched;unmatchedItems=unmatched;excludedItems=excluded;
+  renderMatch(matched,unmatched,excluded);
+  saveCarState();
+}
+function parseLine(s){
+  const t=s.trim();if(!t)return null;
+  let color='';
+  let l=t.replace(/[（(「](白色|白|透明|透|黑色|黑|明)[）)」]/g,function(m,p1){
+    if(p1==='明'||p1==='透明'||p1==='透')color='';
+    else if(p1==='白'||p1==='白色')color='白色';
+    else if(p1==='黑'||p1==='黑色')color='黑';
+    return ' ';
+  })
+    .replace(/[（(][^）)]*[）)]/g,' ')
+    .replace(/[「」\[\]【】]/g,'').replace(/[，,、;；:：]/g,' ')
+    .replace(/\.{3,}/g,' ').replace(/[…]+/g,'').replace(/\s+/g,' ').trim();
+  if(color&&color!=='透明'){
+    if(color==='黑'){
+      const si=l.indexOf(' ');
+      if(si>0)l=l.substring(0,si)+'黑'+l.substring(si);
+      else l=l+'黑';
+    }else l=color+l;
+  }
+  let m=l.match(/^(.+)\s+(\d+\.?\d*)\s*(板|半板|箱|件|个|隻|条|條|捆)?\s*$/);
+  if(m){let q=parseFloat(m[2]);const u=m[3]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;return {name:m[1].trim(),qty:Math.round(q)};}
+  m=l.match(/^(\d+)\s+(.+?)\s+(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?\s*$/);
+  if(m){let q=parseFloat(m[3]);const u=m[4]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;return {name:m[2].trim(),qty:Math.round(q)};}
+  m=l.match(/^(.+)\s+(半板|板)$/);
+  if(m){let q=m[2]==='板'?30:15;return {name:m[1].trim(),qty:q};}
+  m=l.match(/^(.+)\s+[xX×]\s*(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?$/);
+  if(m){let q=parseFloat(m[2]);const u=m[3]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;return {name:m[1].trim(),qty:Math.round(q)};}
+  m=l.match(/^(.+?)(\d+\.?\d*)$/);
+  if(m){let q=parseFloat(m[2]);if(q>0)return {name:m[1].trim(),qty:Math.round(q)};}
+  m=l.match(/^(.+?)(\d+\.?\d*)(板|半板|箱)$/);
+  if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;return {name:m[1].trim(),qty:Math.round(q)};}
+  return null;
+}
+function matchProduct(inputName,rawLine){
+  let c=inputName.trim();if(!c)return null;
+  let p;
+  // -1. X×空格归一化为*
+  const cNorm=c.replace(/\s*[Xx×]\s*/g,'*');
+  // 0. 学习别名（全词匹配——先查原始行文本，再查提纯名）
+  if(rawLine){
+    const raw=rawLine.trim();
+    if(learnedAliases[raw]){p=templateProducts.find(p=>p.name===learnedAliases[raw]);if(p)return p;}
+    const rawNoQty=raw.replace(/\s*\d+(\.\d+)?\s*(箱|板|半板|件|个|隻|条|條|捆)?\s*$/,'').trim();
+    if(rawNoQty!==raw&&learnedAliases[rawNoQty]){p=templateProducts.find(p=>p.name===learnedAliases[rawNoQty]);if(p)return p;}
+  }
+  if(learnedAliases[c]){p=templateProducts.find(p=>p.name===learnedAliases[c]);if(p)return p;}
+  if(cNorm!==c&&learnedAliases[cNorm]){p=templateProducts.find(p=>p.name===learnedAliases[cNorm]);if(p)return p;}
+  // 0b. 学习别名逐词匹配（如"甘蔗中更 10箱"→词"甘蔗中更"命中）
+  for(const w of c.split(/\s+/)){if(learnedAliases[w]){p=templateProducts.find(p=>p.name===learnedAliases[w]);if(p)return p;}}
+  // 1. ALIAS硬编码映射（优先于精确匹配，解决WDK等模板自有产品的重映射）
+  if(ALIAS[c]&&!deletedBuiltins.has(c)){
+    p=templateProducts.find(p=>p.name===ALIAS[c]);if(!p){
+      const clean=s=>s.replace(/[\u200b\u200c\u200d\uFEFF\s\-_—–]/g,'');
+      p=templateProducts.find(p=>clean(p.name)===clean(ALIAS[c]));
+    }if(p)return p;
+  }
+  // 2. 精确匹配（模板产品名完全相同）
+  p=templateProducts.find(p=>p.name===c);if(p)return p;
+  if(cNorm!==c&&ALIAS[cNorm]&&!deletedBuiltins.has(cNorm)){p=templateProducts.find(p=>p.name===ALIAS[cNorm]);if(p)return p;}
+  const words=c.split(/\s+/);
+  for(const w of words){if(ALIAS[w]&&!deletedBuiltins.has(w)){p=templateProducts.find(p=>p.name===ALIAS[w]);if(p)return p;}}
+  for(const w of words){if(/[Xx×]/.test(w)){const w2=w.replace(/[Xx×]/g,'*');if(ALIAS[w2]&&!deletedBuiltins.has(w2)){p=templateProducts.find(p=>p.name===ALIAS[w2]);if(p)return p;}}}
+  if(c.endsWith('透')){const base=c.slice(0,-1);p=templateProducts.find(p=>p.name===base);if(p)return p;if(ALIAS[base]&&!deletedBuiltins.has(base)){p=templateProducts.find(p=>p.name===ALIAS[base]);if(p)return p;}p=templateProducts.find(p=>p.name.includes(base));if(p)return p;}
+  for(const sf of['白色','黑色','白','黑']){if(c.endsWith(sf)){const ba=c.slice(0,-sf.length);if(ALIAS[ba]&&!deletedBuiltins.has(ba)){const t=ALIAS[ba];if(sf==='白'||sf==='白色'){p=templateProducts.find(p=>p.name===t.replace(/碗$/,'白碗'));if(p)return p}else{p=templateProducts.find(p=>p.name===t.replace(/碗$/,'黑碗'));if(p)return p}}}}
+  const isLid=/[盖蓋]/.test(c)&&!/碗/.test(c);
+  const pool=isLid?templateProducts.filter(p=>/[盖蓋]/.test(p.name)||p.name.includes('盒蓋')):templateProducts;
+  if(c.length>=3){p=pool.find(p=>p.name.includes(c));if(p)return p;}
+  p=pool.find(p=>c.includes(p.name));if(p)return p;
+  const c2=c.replace(/[\s\-_—–]/g,'');p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'')===c2);if(p)return p;
+  if(ALIAS[c]&&!deletedBuiltins.has(c)){const ac=ALIAS[c].replace(/[\s\-_—–]/g,'');p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'')===ac);if(p)return p;}
+  const c3=c.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'');
+  p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'');return tp===c3;});if(p)return p;
+  if(c3.length>=3){p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'');return tp.includes(c3);});if(p)return p;}
+  return null;
+}
+function isExcluded(n){if(!n)return false;if(n==='甘蔗中更'||n==='中更')return false;if(n.includes('樽'))return true;for(const e of EXCLUDE)if(n===e||n.includes(e))return true;for(const e of learnedExcludes)if(n===e||n.includes(e))return true;return false;}
+function isNotCustomsName(n){
+  if(!n)return false;
+  if(n==='HK')return true; // 独立HK（如"HK 11"空格分割后变成裸HK）
+  if(n.includes('樽'))return true;
+  if(n.includes('L999'))return true;
+  if(/^X[-]?\d/i.test(n)||/^CH[-]?\d/i.test(n)||/^HK[-]?\d/i.test(n)||/^L[-]?\d/i.test(n)||/^G[-]?\d/i.test(n)||/^C[-]?\d/i.test(n)||/^M[-]?\d/i.test(n)||/^N[-]?\d/i.test(n))return true;
+  return false;
+}
+
+// 产品供应商备选索引（同名不同供应商的产品）
+let prodAlts={};let prodAltsDirty=true;
+function buildProdAlts(){
+  if(!prodAltsDirty)return;
+  prodAlts={};
+  for(const p of templateProducts){
+    const key=p.name;
+    if(!prodAlts[key])prodAlts[key]=[];
+    prodAlts[key].push({supplier:p.supplier,row:p.row,variety:p.variety,netWeight:p.netWeight,price:p.price,pack:p.pack});
+  }
+  // 只保留有多个供应商的产品
+  for(const k of Object.keys(prodAlts))if(prodAlts[k].length<=1)delete prodAlts[k];
+  prodAltsDirty=false;
+}
+// 供应商关键词→完整供应商名映射（装车单里常出现简称）
+const SUPPLIER_KW={
+  '旺盟':'旺盟(上海)新材料科技有限公司','旺盟上海':'旺盟(上海)新材料科技有限公司',
+  '韶能':'韶能集团绿洲生态(新丰)科技有限公司','韶能绿洲':'韶能集团绿洲生态(新丰)科技有限公司',
+  '福昌':'浙江福昌环保科技有限公司','浙江福昌':'浙江福昌环保科技有限公司',
+  '金晟':'江苏金晟环保餐具有限公司','江苏金晟':'江苏金晟环保餐具有限公司',
+  '稻香':'河北稻香环保科技有限公司','河北稻香':'河北稻香环保科技有限公司',
+  '青橄榄':'青橄榄环保科技（东莞）有限公司','青橄榄东莞':'青橄榄环保科技（东莞）有限公司',
+  '大江':'大江環保','惠州大江':'大江環保',
+  '兆盈':'河南海翔新材料科技有限公司','银桥':'河南海翔新材料科技有限公司',
+  '海翔':'河南海翔新材料科技有限公司','河南海翔':'河南海翔新材料科技有限公司',
+  '中央化学':'東莞中央化學','中央化學':'東莞中央化學','CTP':'東莞中央化學',
+  '韓盛':'汕頭韓盛','韩盛':'汕頭韓盛','汕头韩盛':'汕頭韓盛',
+  '美星':'東莞美星','东莞美星':'東莞美星',
+  '長江':'台山長江','长江':'台山長江','台山长江':'台山長江',
+  '興明發':'深圳興明發','兴明发':'深圳興明發',
+  '茂盈':'東莞茂盈','东莞茂盈':'東莞茂盈',
+  '興年華':'東莞興年華','兴年华':'東莞興年華',
+};
+// 供应商强制覆盖：这些产品已转到河南海翔
+const HAOXIANG='河南海翔新材料科技有限公司';
+const SUPPLIER_FORCE={H500:HAOXIANG,H650:HAOXIANG,H750:HAOXIANG,H1000:HAOXIANG,'盒蓋':HAOXIANG};
+function forceSupplier(prod){
+  const name=prod.name;
+  if(!SUPPLIER_FORCE[name])return prod;
+  // 先找模板里有没有河南海翔版本
+  const alt=templateProducts.find(p=>p.name===name&&p.supplier===HAOXIANG);
+  if(alt)return alt;
+  // 没有就复制当前产品对象，覆盖供应商
+  return {...prod,supplier:HAOXIANG};
+}
+function autoMatchSupplier(parsedName,lineText,prod){
+  const alts=prodAlts[prod.name];if(!alts||alts.length<=1)return prod;
+  // 在解析后的产品名和原始行中搜索供应商关键词
+  const haystack=parsedName+' '+lineText;
+  for(const alt of alts){
+    const fullName=alt.supplier;
+    // 直接匹配完整供应商名
+    if(haystack.includes(fullName))return templateProducts.find(p=>p.name===prod.name&&p.supplier===fullName)||prod;
+  }
+  // 通过关键词匹配
+  for(const alt of alts){
+    for(const [kw,full] of Object.entries(SUPPLIER_KW)){
+      if(full===alt.supplier&&haystack.includes(kw)){
+        return templateProducts.find(p=>p.name===prod.name&&p.supplier===full)||prod;
+      }
+    }
+  }
+  return prod;
+}
+function switchSupplier(idx,supplierName){
+  const m=matchedItems[idx];if(!m)return;
+  const alts=prodAlts[m.product.name];if(!alts)return;
+  const alt=alts.find(a=>a.supplier===supplierName);if(!alt)return;
+  const tp=templateProducts.find(p=>p.name===m.product.name&&p.supplier===supplierName);
+  if(!tp)return;
+  m.product=tp; // 替换整个产品对象
+  renderMatch(matchedItems,unmatchedItems,excludedItems);
+}
+
+function renderMatch(matched,unmatched,excluded){
+  document.getElementById('matchCard').style.display='block';
+  const stats=document.getElementById('statsArea');
+  let tBoxes=0,tNet=0,tPrice=0;
+  for(const m of matched){tBoxes+=m.qty;tNet+=(m.product.netWeight||0)*m.qty;tPrice+=((m.product.price||0)+1)*m.qty;} // 价格+1: 报关申报价格 = 模板单价 + 1元/箱
+  stats.innerHTML=`<div class="stat">匹配<b>${matched.length}</b></div><div class="stat">箱数<b>${tBoxes}</b></div><div class="stat">净重<b>${tNet.toFixed(1)}</b></div><div class="stat">金额<b>¥${tPrice.toFixed(2)}</b></div>`;
+  let html='<div class="edit-row header"><span class="name">装车单名 → 模板产品名</span><span class="qty">数量</span><span class="supplier">供应商</span><span class="status"></span><span class="del-btn"></span></div>';
+  let seq=1,idx=0;
+  for(const m of matched){
+    const brand=getBrand(m.product.name,m.product.supplier,m.product.row);
+    html+=`<div class="edit-row">
+      <span class="name">${seq++}. <span style="color:var(--text-tertiary);font-weight:normal">${escHtml(m.raw)}</span> → ${escHtml(m.product.name)}</span>
+      <span class="qty"><input type="number" value="${m.qty}" min="1" onchange="updateQty(${idx},this.value)"></span>
+      <span class="supplier">${renderSupplier(m,idx)}</span>
+      <span class="status"><span class="status-dot status-dot-ok"></span></span>
+      <span class="del-btn" onclick="delRow(${idx})">×</span>
+    </div>`;idx++;
+  }
+  if(unmatched.length>0){
+    html+='<div style="margin-top:10px;padding:10px;background:var(--pastel-yellow);border-radius:var(--radius-sm);font-size:12px;color:var(--pastel-yellow-text)">⚠️ 未识别产品（点击手动匹配｜下次自动识别）:<br>';
+    for(const u of unmatched){
+      html+=`<span class="badge badge-yellow" style="margin:3px 4px;cursor:pointer" onclick="learnAlias('${escHtml(u.text)}')" title="点击匹配模板产品">${escHtml(u.text)}</span>`;
+    }
+    html+='</div>';
+  }
+  if(excluded.length>0){
+    html+='<div style="margin-top:6px;padding:10px;background:var(--pastel-red);border-radius:var(--radius-sm);font-size:13px;color:var(--pastel-red-text)"><b>已识别不报关产品（已自动跳过）</b>:<br>';
+    for(const e of excluded){
+      const en=e.name||'';
+      const eq=e.qty?e.qty+'箱':'';
+      html+='<span class="badge badge-red" style="margin:3px 4px">'+en+' '+eq+'</span>';
+    }
+    html+='</div>';
+  }
+  document.getElementById('editList').innerHTML=html;
+}
+function renderSupplier(m,idx){
+  const alts=prodAlts[m.product.name];
+  if(!alts||alts.length<=1)return escHtml(m.product.supplier);
+  // 供应商下拉
+  let opts='';
+  for(const a of alts){
+    const sel=a.supplier===m.product.supplier?' selected':'';
+    opts+=`<option value="${escHtml(a.supplier)}"${sel}>${escHtml(a.supplier)}</option>`;
+  }
+  return `<select style="font-size:11px;font-family:var(--mono);background:rgba(8,12,20,.6);color:var(--text-tri);border:1px solid rgba(0,212,255,.15);border-radius:4px;padding:2px 4px;max-width:120px" onchange="switchSupplier(${idx},this.value)">${opts}</select>`;
+}
+
+function updateQty(idx,v){if(matchedItems[idx])matchedItems[idx].qty=Math.max(1,parseInt(v)||1);updateStats(matchedItems);}
+function updateStats(matched){
+  const stats=document.getElementById('statsArea');
+  let tBoxes=0,tNet=0,tPrice=0;
+  for(const m of matched){tBoxes+=m.qty;tNet+=(m.product.netWeight||0)*m.qty;tPrice+=((m.product.price||0)+1)*m.qty;} // 价格+1: 报关申报价格 = 模板单价 + 1元/箱
+  stats.innerHTML=`<div class="stat">匹配<b>${matched.length}</b></div><div class="stat">箱数<b>${tBoxes}</b></div><div class="stat">净重<b>${tNet.toFixed(1)}</b></div><div class="stat">金额<b>¥${tPrice.toFixed(2)}</b></div>`;
+}
+function delRow(idx){if(idx>=0&&idx<matchedItems.length){matchedItems.splice(idx,1);renderMatch(matchedItems,unmatchedItems,excludedItems);}}
+let prodListDirty=true;
+function showAdd(){
+  const dl=document.getElementById('prodList');
+  if(prodListDirty){dl.innerHTML='';for(const p of templateProducts)dl.innerHTML+=`<option value="${escHtml(p.name)}">`;prodListDirty=false;}
+  document.getElementById('addModal').style.display='flex';
+}
+function closeAdd(){document.getElementById('addModal').style.display='none';}
+document.getElementById('addModal').addEventListener('click',function(e){if(e.target===this)closeAdd();});
+function confirmAdd(){
+  const n=document.getElementById('addName').value.trim();
+  const q=parseInt(document.getElementById('addQty').value)||1;
+  const p=templateProducts.find(x=>x.name===n);
+  if(!p){alert('模板中找不到该产品：'+n);return;}
+  matchedItems.push({product:p,qty:q,raw:n});
+  renderMatch(matchedItems,unmatchedItems,excludedItems);
+  document.getElementById('addName').value='';document.getElementById('addQty').value='';
+  closeAdd();
+}
+// ===== 智能别名学习 =====
+let learnedAliases={},learnedExcludes={},deletedBuiltins=new Set();
+const BUILTIN_LEARNED={"12":"12*197四層獨立紙包","16":"H16碗","1813":"28MM內格","MX1000盒":"美星1000盒","MX700碗":"美星700碗","熱杯280g":"280 8安花紙杯","16安透明碗":"H16碗","黑色美式1000":"1000美黑","16透明":"H16碗","H12透明":"H12碗","H16白色.":"H16白碗","H30透明":"H30碗","Dg11.":"DG-11透","1-2安甘蔗蓋":"2安甘蔗杯蓋","H1250蓋":"H1250碗蓋","30安透明":"H30碗","熱杯250g":"250 8安花紙杯","30安蓋":"H24-30碗蓋","興1000透碗":"興年華1000碗","30-35紙碗蓋":"H24-30碗蓋","35紙碗":"35安紙碗","Y1200透碗":"Y1200碗","Y1350透碗":"Y1350碗","30安透明碗":"H30碗","30安白色碗":"H30白碗","1000方紙合":"1000紙盒","30透明":"H30碗","透明30碗":"H30碗","白色30":"H30白碗","淨12膠碗":"H12碗","H盖":"盒蓋","紙飯羹":"甘蔗中更","28mm內格":"28MM內格","80PP熱蓋":"H12-16碗蓋","1813 加厚黑色":"28MM內格","加厚黑色":"28MM內格","MX750盒":"美星750盒","9 甘蔗圓碟":"9\"甘蔗圓碟","甘蔗圓碟":"9\"甘蔗圓碟","16黑碗":"H16碗","7 *197 獨立包裝":"7*197四層獨立紙包","12安白紙碗":"12安紙碗","甘蔗1000盒":"1000甘蔗盒","甘蔗1000盖":"1000甘蔗盒盖","銀僑1200美透":"X11","12安透明碗":"H12碗","H1250白色":"H1250白碗","銀橋1200美透":"X11","H-1250 蓋":"H1250碗蓋","H-1250":"H1250碗蓋","2000魚盒黑":"Hs2000美式","興1250碗黑":"興明發1250黑碗","DG23透明":"DG一23","7 加厚甘蔗圓碟":"7\"甘蔗圓碟(加厚)","加厚甘蔗圓碟":"7\"甘蔗圓碟(加厚)","6*197三層散":"6*197 三層紙飲管","甘蔗碟9寸圓碟":"9\"甘蔗圓碟","HS1500透碗":"HS1500碗","HS1000透明美式":"HS1000+","HS1000透方盒":"HS1000方盒","HS142高蓋":"HS142蓋","1250內隔":"HS內格","6*197三散":"6*197 三層紙飲管","7*197四散":"7*197 四層紙飲管","12*197四散":"12*197 四層紙飲管","長方750紙盒":"750紙盒","850蓋":"850蓋","16安碗":"H16碗","16安蓋":"H12-16碗蓋","1300沙拉碗":"35安紙碗","1300紙碗":"35安紙碗","PP熱蓋":"H12-16碗蓋","T38":"28MM內格","T34":"28MM內格","T36":"28MM內格","T316":"28MM內格","茂盈":"1000美黑","24透":"H24碗","HS1350黑碗":"Y1350碗","HS700黑碗":"Y1200碗","LS55":"LS一55","LS55(150装箱)":"LS一55","容750":"容海500","容1000":"興明發500底","DG11透明":"DG-11透","DG11":"DG-11透","银桥X11":"X11","7加厚甘蔗圓碟":"7\"甘蔗圓碟(加厚)","HS內格":"HS內格","美黑1000":"1000美黑","美黑":"1000美黑","H1250透明":"H1250碗","白色LS-55":"LS一55白","白色LS-":"LS一55白","30紙碗":"30安紙碗","9吋甘蔗紙碟":"9\"甘蔗圓碟","白色8安 杯":"8安白杯","白色8安":"8安白杯","650盒":"H650","白色H-1500碗":"H1250白碗","HS2000魚盒黑":"Hs2000美式","銀橋1200美式透明合":"1000美透","7安杯":"8安白杯","30安白碗":"H30白碗","12胶碗透":"H12碗","興年华1000碗":"興年華1000碗","DG11.":"DG-11透","DG":"DG-11透","12透明":"H12碗","12白色":"H12白碗","2015B.白加厚":"28MM內格","2安甘蔗蓋":"2安甘蔗杯蓋","LS 2A":"LS一2A","LS":"LS一2A","2A":"LS一2A","HS500透碗":"HS500圓盒","28mm内格":"28MM內格","H16胶碗":"H16碗","16pp碗":"H16碗","24pp碗":"H24碗","30pp碗":"H30碗","12-16 盖":"H12-16碗蓋","12-16":"H12-16碗蓋","12-16pp碗盖":"H12-16碗蓋","24-30pp碗盖":"H24-30碗蓋","4.0內格":"28MM內格","白色12 紙碗":"12安紙碗","白色12":"12安紙碗","紙碗":"12安紙碗","Dg11":"DG-11透","Dg":"DG-11透","PS熱蓋":"H12-16碗蓋","韓盛1.5安醬杯":"HS2安杯","12-16安蓋":"H12-16碗蓋","24安透明碗":"H24碗","興1250ml透碗":"興明發1250碗","HS2000ml美透":"Hs2000美式","HS2000黑碗":"Hs2000美式","銀橋美式750方合黑色":"1000美透","韓盛3000透明圓盆":"HS1750碗","LS1000":"1000美黑","LS蓋":"H12-16碗蓋","H1500黑碗":"H1250碗","HS3000ml黑色碗":"HS1750碗","16胶碗":"H16碗","HS700黑碗底":"Y1200碗","中央化學115盒":"中央CTP115盒","中央化學115蓋":"中央CTP115蓋","紙盒膠蓋":"H12-16碗蓋","500-1000ml 蓋":"H24-30碗蓋","500-1000ml":"H24-30碗蓋","250热杯":"250 8安花紙杯","12啡紙碗":"12安紙碗","12 X197四紙包":"12*197四層獨立紙包","1813黑碟加厚100裝":"28MM內格"},BUILTIN_EXCLUDES=["白色大圓碟 2000裝","中一深","HKT8","HK 11"];
+const BUILTIN_HASH=(()=>{const s=JSON.stringify(BUILTIN_LEARNED)+JSON.stringify(BUILTIN_EXCLUDES);let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return h.toString(36);})();
+function loadLearnedAliases(){
+  learnedAliases={};
+  // 检查BUILTIN是否已更新（嵌入新版本后），如是则清空旧localStorage避免冲突
+  const storedHash=localStorage.getItem('v63hash');
+  if(storedHash!==BUILTIN_HASH){
+    localStorage.removeItem('v63learned');
+    localStorage.removeItem('v63deleted');
+    localStorage.removeItem('v63exclude');
+    localStorage.setItem('v63hash',BUILTIN_HASH);
+  }
+  try{const s=localStorage.getItem('v63deleted');if(s){deletedBuiltins=new Set(JSON.parse(s));}}catch(e){deletedBuiltins=new Set();}
+  for(const [k,v] of Object.entries(BUILTIN_LEARNED)){
+    if(!deletedBuiltins.has(k))learnedAliases[k]=v;
+  }
+  try{const s=localStorage.getItem('v63learned');if(s){const d=JSON.parse(s);for(const [k,v] of Object.entries(d)){if(!deletedBuiltins.has(k))learnedAliases[k]=v;}}}catch(e){}
+  learnedExcludes=[...BUILTIN_EXCLUDES];
+  try{const s=localStorage.getItem('v63exclude');if(s){const d=JSON.parse(s);for(const x of d)if(!learnedExcludes.includes(x))learnedExcludes.push(x);}}catch(e){}
+  refreshLearnUI();
+}
+let pendingLearnName='';
+function learnAlias(rawName){
+  pendingLearnName=rawName;
+  document.getElementById('learnModal').style.display='flex';
+  document.getElementById('learnInput').value=rawName;
+  document.getElementById('learnInput').focus();
+  document.getElementById('learnInput').select();
+  filterLearnList(); // 初始显示全部产品
+}
+function filterLearnList(){
+  const q=document.getElementById('learnInput').value.trim().toLowerCase();
+  const dd=document.getElementById('learnDropdown');
+  const items=templateProducts.filter(p=>!q||p.name.toLowerCase().includes(q));
+  if(items.length===0){dd.style.display='none';return;}
+  dd.style.display='block';
+  dd.innerHTML=items.slice(0,30).map(p=>`<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('${escHtml(p.name)}')">${escHtml(p.name)}</div>`).join('');
+}
+function selectLearnItem(name){
+  document.getElementById('learnInput').value=name;
+  document.getElementById('learnDropdown').style.display='none';
+  confirmLearn();
+}
+function confirmLearn(){
+  const templateName=document.getElementById('learnInput').value.trim();
+  if(!templateName){alert('请选择模板产品');return;}
+  const prod=templateProducts.find(p=>p.name===templateName);
+  if(!prod){alert(`模板中找不到: ${templateName}`);return;}
+  // 保存别名：同时存原始行和parseLine解析后的纯产品名
+  learnedAliases[pendingLearnName]=templateName;
+  deletedBuiltins.delete(pendingLearnName); // 重新学习→取消删除标记
+  // 尝试用parseLine提取纯产品名，也存一份
+  const parsed=parseLine(pendingLearnName);
+  if(parsed&&parsed.name&&parsed.name!==pendingLearnName){
+    learnedAliases[parsed.name]=templateName;
+  }
+  // 也存各空格分词
+  for(const w of pendingLearnName.split(/\s+/)){
+    if(w.length>=2&&w!==pendingLearnName)learnedAliases[w]=templateName;
+  }
+  saveLearnedAliases();
+  alert(`已学习: "${pendingLearnName}" → "${templateName}"\n下次自动识别`);
+  closeLearn();
+  const text=document.getElementById('inputText').value.trim();
+  if(text){doClean(text);}
+}
+function learnExclude(){
+  learnedExcludes.push(pendingLearnName);
+  try{localStorage.setItem('v63exclude',JSON.stringify(learnedExcludes))}catch(e){}
+  alert(`已将 "${pendingLearnName}" 标记为不报关\n下次自动跳过`);
+  closeLearn();
+  // 重新解析
+  const text=document.getElementById('inputText').value.trim();
+  if(text){doClean(text);}
+}
+function closeLearn(){
+  document.getElementById('learnModal').style.display='none';
+  document.getElementById('learnDropdown').style.display='none';
+}
+// 别名面板
+function toggleLearnPanel(){
+  const p=document.getElementById('learnPanel');
+  const a=document.getElementById('learnArrow');
+  p.style.display=p.style.display==='block'?'none':'block';
+  a.textContent=p.style.display==='block'?'▼':'▲';
+}
+function refreshLearnUI(){
+  const card=document.getElementById('learnCard');
+  const list=document.getElementById('learnList');
+  const aliCnt=Object.keys(learnedAliases).length;
+  const excCnt=learnedExcludes.length;
+  document.getElementById('learnCount').textContent=aliCnt+(excCnt>0?'+'+excCnt:'');
+  card.style.display='block';
+  document.getElementById('learnPanel').style.display='none';
+  document.getElementById('learnArrow').textContent='▲';
+  let h='';
+  for(const [k,v] of Object.entries(learnedAliases)){
+    const ks=escHtml(k),vs=escHtml(v);
+    h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(0,212,255,.08);border-radius:6px;font-size:12px"><span>${ks} → <b>${vs}</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="${ks}">×</span></div>`;
+  }
+  for(const e of learnedExcludes){
+    const es=escHtml(e);
+    h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(244,63,94,.08);border-radius:6px;font-size:12px"><span>🚫 <b>${es}</b>（不报关）</span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-exkey="${es}">×</span></div>`;
+  }
+  list.innerHTML=h||'暂无';
+  list.querySelectorAll('[data-key]').forEach(el=>{
+    el.onclick=function(e){e.stopPropagation();const k=this.dataset.key;const v=learnedAliases[k];delete learnedAliases[k];for(const w of k.split(/\s+/)){if(w.length>=2&&learnedAliases[w]===v)delete learnedAliases[w];}deletedBuiltins.add(k);saveLearnedAliases();refreshLearnUI();};
+  });
+  list.querySelectorAll('[data-exkey]').forEach(el=>{
+    el.onclick=function(e){e.stopPropagation();learnedExcludes=learnedExcludes.filter(x=>x!==this.dataset.exkey);saveLearnedAliases();};
+  });
+}
+function clearLearned(){
+  if(!confirm('⚠️ 确定清空所有别名和不报关标记？此操作不可恢复！'))return;
+  const check=prompt('请输入 DELETE 确认清空','');
+  if(check!=='DELETE'){alert('已取消');return;}
+  learnedAliases={};learnedExcludes=[];deletedBuiltins=new Set();
+  if(Object.keys(BUILTIN_LEARNED).length>0)Object.assign(learnedAliases,BUILTIN_LEARNED);
+  if(BUILTIN_EXCLUDES.length>0)learnedExcludes=[...BUILTIN_EXCLUDES];
+  saveLearnedAliases();refreshLearnUI();
+}
+function exportLearned(){
+  const json=JSON.stringify({aliases:learnedAliases,excludes:learnedExcludes},null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='报关别名_'+(new Date().toISOString().slice(0,10))+'.json';
+  a.click();URL.revokeObjectURL(url);
+}
+function importLearned(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=function(ev){
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.aliases){Object.assign(learnedAliases,d.aliases);}
+      else{Object.assign(learnedAliases,d);}
+      if(d.excludes){for(const x of d.excludes)if(!learnedExcludes.includes(x))learnedExcludes.push(x);}
+      saveLearnedAliases();refreshLearnUI();
+      alert(`已导入 ${Object.keys(learnedAliases).length} 别名 + ${learnedExcludes.length} 不报关`);
+    }catch(e){alert('文件格式无效，请选择 .json 文件');}
+  };
+  r.readAsText(f);
+}
+function saveLearnedAliases(){
+  try{
+    const userOnly={};
+    for(const [k,v] of Object.entries(learnedAliases)){
+      if(!BUILTIN_LEARNED[k]||deletedBuiltins.has(k))userOnly[k]=v;
+    }
+    localStorage.setItem('v63learned',JSON.stringify(userOnly));
+    localStorage.setItem('v63exclude',JSON.stringify(learnedExcludes));
+    localStorage.setItem('v63deleted',JSON.stringify([...deletedBuiltins]));
+    refreshLearnUI();
+  }catch(e){alert('别名保存失败: '+e.message);}
+}
+function bakeHTML(){
+  const aliCnt=Object.keys(learnedAliases).length;
+  if(aliCnt===0&&learnedExcludes.length===0){alert('没有已学习的内容');return;}
+  const aliases=JSON.stringify(learnedAliases);
+  const excludes=JSON.stringify(learnedExcludes);
+  let html=document.documentElement.outerHTML;
+  html=html.replace(/BUILTIN_LEARNED\s*=\s*\{[^}]*\}/,`BUILTIN_LEARNED=${aliases}`);
+  html=html.replace(/BUILTIN_EXCLUDES\s*=\s*\[[^\]]*\]/,`BUILTIN_EXCLUDES=${excludes}`);
+  const blob=new Blob(['<!DOCTYPE html>\n'+html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download='报关初稿生成器_v6.4.html';
+  a.click();URL.revokeObjectURL(url);
+  setTimeout(()=>alert(`已嵌入 ${aliCnt} 别名 + ${learnedExcludes.length} 不报关\n发送到手机即可生效`),500);
+}
+// ===== 学习结束 =====
+
+// ===== 磅单净重匹配 =====
+const XMF_SUPPLIER='深圳興明發';
+let weightPlan=null; // {adjustments:[{idx,qty,name,perKg,delta}], currentNet, targetNet}
+function matchWeight(){
+  if(matchedItems.length===0){alert('没有匹配数据');return;}
+  // 计算当前总净重 + 兴明发产品
+  let curNet=0,xmfItems=[];
+  for(let i=0;i<matchedItems.length;i++){
+    const m=matchedItems[i];
+    curNet+=m.product.netWeight*m.qty;
+    if(m.product.supplier===XMF_SUPPLIER)xmfItems.push({idx:i,qty:m.qty,perKg:m.product.netWeight,name:m.product.name});
+  }
+  document.getElementById('weightInfo').innerHTML=
+    `<span style="color:var(--cyan)">当前整车总净重: <b>${curNet.toFixed(1)} kg</b></span> · 其中兴明发产品 ${xmfItems.length} 种`;
+  document.getElementById('targetWeight').value='';
+  document.getElementById('weightSuggest').innerHTML='';
+  document.getElementById('btnApplyWeight').disabled=true;
+  weightPlan=null;
+  document.getElementById('weightModal').style.display='flex';
+  document.getElementById('targetWeight').focus();
+}
+function calcWeight(){
+  const target=parseFloat(document.getElementById('targetWeight').value);
+  if(!target||target<=0){alert('请输入有效磅单净重');return;}
+  let xmf=[];
+  for(let i=0;i<matchedItems.length;i++){
+    const m=matchedItems[i];
+    if(m.product.supplier===XMF_SUPPLIER)xmf.push({idx:i,qty:m.qty,perKg:m.product.netWeight,name:m.product.name});
+  }
+  if(xmf.length===0){document.getElementById('weightSuggest').innerHTML='<span style="color:var(--rose)">当前没有可调整的产品</span>';return;}
+  let curNet=0;
+  for(const m of matchedItems)curNet+=m.product.netWeight*m.qty;
+  const diff=target-curNet;
+  
+  let bestPlan=null,bestErr=Infinity;
+
+  // 策略1: 贪心法 — 每个产品按比例分配差额，每人不超过±15箱
+  // 优点: 速度极快，结果分布均匀
+  {
+    let remaining=diff;
+    const plan=[];
+    const copy=xmf.map(x=>({...x,delta:0}));
+    // 按perKg从大到小排序（大箱先动，减少调整次数）
+    copy.sort((a,b)=>b.perKg-a.perKg);
+    let pass=0;
+    while(Math.abs(remaining)>0.01&&pass<10){
+      pass++;
+      for(const xi of copy){
+        if(Math.abs(remaining)<0.01)break;
+        const maxMove=Math.min(15,Math.abs(Math.round(remaining/xi.perKg)));
+        const move=remaining>0?Math.min(maxMove,99-xi.qty):Math.max(-maxMove,1-xi.qty);
+        if(move===0)continue;
+        xi.delta+=move;xi.qty+=move;
+        remaining-=move*xi.perKg;
+      }
+    }
+    for(const xi of copy){
+      if(xi.delta!==0)plan.push({idx:xi.idx,name:xi.name,perKg:xi.perKg,oldQty:xmf.find(x=>x.idx===xi.idx).qty,newQty:xi.qty,delta:xi.delta});
+    }
+    const err=Math.abs(diff-plan.reduce((s,x)=>s+x.perKg*x.delta,0));
+    if(err<bestErr&&plan.length>0){bestErr=err;bestPlan=plan;}
+  }
+
+  // 策略2: 两产品穷举 (±12 箱，只试前8个和后8个产品)
+  // 注：已移除单产品精确凑策略，确保至少用2个兴明发产品分摊差额
+  const topN=Math.min(8,xmf.length);
+  for(let a=0;a<topN;a++){
+    for(let b=a+1;b<topN;b++){
+      for(let da=-12;da<=12;da++){
+        if(xmf[a].qty+da<1)continue;
+        const dA=da*xmf[a].perKg;
+        const db=Math.round((diff-dA)/xmf[b].perKg);
+        if(Math.abs(db)>12)continue;
+        if(xmf[b].qty+db<1)continue;
+        const err=Math.abs(dA+db*xmf[b].perKg-diff);
+        if(err<bestErr){
+          bestErr=err;bestPlan=[
+            {idx:xmf[a].idx,name:xmf[a].name,perKg:xmf[a].perKg,oldQty:xmf[a].qty,newQty:xmf[a].qty+da,delta:da},
+            {idx:xmf[b].idx,name:xmf[b].name,perKg:xmf[b].perKg,oldQty:xmf[b].qty,newQty:xmf[b].qty+db,delta:db},
+          ].filter(x=>x.delta!==0);
+        }
+      }
+    }
+  }
+
+  // 策略4: 三产品精调（前6个产品中任选3个，两穷举+第三凑差额，范围±8）
+  const m6=Math.min(6,xmf.length);
+  for(let a=0;a<m6;a++){
+    for(let b=a+1;b<m6;b++){
+      for(let c=b+1;c<m6;c++){
+        for(let da=-8;da<=8;da++){
+          if(xmf[a].qty+da<1)continue;
+          const dA=da*xmf[a].perKg;
+          for(let db=-8;db<=8;db++){
+            if(xmf[b].qty+db<1)continue;
+            const dB=dA+db*xmf[b].perKg;
+            const dc=Math.round((diff-dB)/xmf[c].perKg);
+            if(Math.abs(dc)>8)continue;
+            if(xmf[c].qty+dc<1)continue;
+            const err=Math.abs(dB+dc*xmf[c].perKg-diff);
+            if(err<bestErr){
+              bestErr=err;bestPlan=[
+                {idx:xmf[a].idx,name:xmf[a].name,perKg:xmf[a].perKg,oldQty:xmf[a].qty,newQty:xmf[a].qty+da,delta:da},
+                {idx:xmf[b].idx,name:xmf[b].name,perKg:xmf[b].perKg,oldQty:xmf[b].qty,newQty:xmf[b].qty+db,delta:db},
+                {idx:xmf[c].idx,name:xmf[c].name,perKg:xmf[c].perKg,oldQty:xmf[c].qty,newQty:xmf[c].qty+dc,delta:dc},
+              ].filter(x=>x.delta!==0);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if(!bestPlan||bestPlan.length===0){document.getElementById('weightSuggest').innerHTML='<span style="color:var(--rose)">无法找到可行调整方案</span>';return;}
+  const finalNet=curNet+bestPlan.reduce((s,x)=>s+x.perKg*x.delta,0);
+  let html=`<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;margin:8px 0;font-size:12px">`;
+  html+=`当前总净重: <b>${curNet.toFixed(1)}</b> kg → 目标: <b>${target.toFixed(1)}</b> kg<br>`;
+  html+=`差额: <b style="color:${diff>=0?'var(--green)':'var(--rose)'}">${diff>0?'+':''}${diff.toFixed(1)}</b> kg | 调整后: <b>${finalNet.toFixed(1)}</b> kg | 误差: <b>${bestErr.toFixed(2)}</b> kg</div>`;
+  html+=`<div style="font-size:12px;color:var(--text-sec);margin:4px 0">建议调整（${bestPlan.length}个产品）:</div>`;
+  for(const x of bestPlan){
+    html+=`<div style="padding:6px 10px;margin:3px 0;background:rgba(8,12,20,.5);border-radius:6px;font-size:12px">`+
+      `<span style="font-weight:600">${x.name}</span> · ${x.perKg}kg/箱 · ${x.oldQty}→<b style="color:${x.delta>0?'var(--green)':'var(--rose)'}">${x.newQty}</b> (${x.delta>0?'+':''}${x.delta}箱)</div>`;
+  }
+  weightPlan={plan:bestPlan,currentNet:curNet,targetNet:target};
+  document.getElementById('weightSuggest').innerHTML=html;
+  document.getElementById('btnApplyWeight').disabled=false;
+}
+function applyWeight(){
+  if(!weightPlan||!weightPlan.plan)return;
+  for(const x of weightPlan.plan){
+    if(x.newQty<1){alert(`错误: ${x.name} 调整后箱数<1`);return;}
+    if(matchedItems[x.idx])matchedItems[x.idx].qty=x.newQty;
+  }
+  weightPlan=null;
+  renderMatch(matchedItems,unmatchedItems,excludedItems);
+  saveCarState();
+  closeWeight();
+}
+function closeWeight(){document.getElementById('weightModal').style.display='none';}
+document.getElementById('weightModal').addEventListener('click',function(e){if(e.target===this)closeWeight();});
+document.getElementById('carNoModal').addEventListener('click',function(e){if(e.target===this)closeCarNoModal();});
+document.getElementById('carNoInput').addEventListener('keydown',function(e){if(e.key==='Enter')confirmCarNo();});
+// ===== 磅单匹配结束 =====
+function genWechat(){
+  if(matchedItems.length===0){alert('没有匹配数据');return;}
+  const groups={};
+  for(const m of matchedItems){
+    let origin=ORIGIN[m.product.supplier]||'';
+    // 备选：直接匹配供应商名里的关键词
+    if(!origin){
+      for(const [sup,ori] of Object.entries(ORIGIN)){
+        if(sup.includes(m.product.supplier)||m.product.supplier.includes(sup)){origin=ori;break;}
+      }
+    }
+    const brand=getBrand(m.product.name,m.product.supplier,m.product.row);
+    const key=`${origin}|${m.product.variety}|${brand||''}`;
+    if(!groups[key])groups[key]={origin,variety:m.product.variety,brand,items:[],minRow:Infinity};
+    groups[key].items.push(m);groups[key].minRow=Math.min(groups[key].minRow,m.product.row);
+  }
+  const sorted=Object.values(groups).sort((a,b)=>a.minRow-b.minRow);
+  let car=carNo||'';
+  if(!car){
+    document.getElementById('carNoModal').style.display='flex';
+    document.getElementById('carNoInput').value='';
+    document.getElementById('carNoInput').focus();
+    window._genWechatPending={sorted};
+    return;
+  }
+  _doGenWechat(car,sorted);
+}
+function confirmCarNo(){
+  const car=document.getElementById('carNoInput').value.trim();
+  if(!car)return;
+  closeCarNoModal();
+  if(window._genWechatPending)_doGenWechat(car,window._genWechatPending.sorted);
+}
+function closeCarNoModal(){document.getElementById('carNoModal').style.display='none';window._genWechatPending=null;}
+function _doGenWechat(car,sorted){
+  let msg=`${car}  興協出口  深圳湾\n\n`,seq=1;
+  for(const g of sorted){
+    let brandTxt=g.brand||'没有';
+    if(brandTxt==='美星')brandTxt='没有';
+    const tQty=g.items.reduce((s,i)=>s+i.qty,0);
+    const tNet=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty,0);
+    const tGross=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty+i.qty/2,0);
+    const tPrice=g.items.reduce((s,i)=>s+((i.product.price||0)+1)*i.qty,0); // 价格+1: 报关申报价格 = 模板单价 + 1元/箱
+    const uniqueRows=new Set(g.items.map(i=>i.product.row));
+    const itemCnt=uniqueRows.size;
+    const cntStrVal=cntStr(itemCnt);
+    let specTxt='';
+    if(g.variety==='紙吸管'){
+      const specSet=new Set();
+      for(const it of g.items){
+        const m2=it.product.name.match(/(\d+)\*(\d+)/);
+        if(m2)specSet.add(`${m2[1]}×${m2[2]}`);
+      }
+      specTxt=[...specSet].join('、');
+    }else{
+      const specs=SPEC_MAP[g.variety]||[];
+      if(itemCnt===1&&specs.length>=1)specTxt=specs[0];
+      else if(itemCnt>=2&&specs.length>=2)specTxt=`${specs[0]}、${specs[1]}`;
+      else specTxt=specs[0]||'';
+    }
+    msg+=`${seq}）${g.variety}（${cntStrVal}）${g.origin}\n`;
+    msg+=`牌子：${brandTxt}\n箱數：${tQty}\n毛重量：${tGross.toFixed(2)}\n淨重量：${tNet.toFixed(2)}\n`;
+    msg+=`规格：${specTxt}\n¥${tPrice.toFixed(2)}\n\n`;
+    seq++;
+  }
+  const tBoxes=matchedItems.reduce((s,i)=>s+i.qty,0);
+  const tNetAll=matchedItems.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty,0);
+  const tPriceAll=matchedItems.reduce((s,i)=>s+((i.product.price||0)+1)*i.qty,0);
+  msg+=`總數量${tBoxes}箱\n總淨重${tNetAll.toFixed(2)}kg\n總價錢¥${tPriceAll.toFixed(2)}`;
+  showResult(msg,'微信消息（点击复制）');
+}
+
+async function exportData(){
+  if(matchedItems.length===0){alert('没有数据');return;}
+  const saved=localStorage.getItem('savedTemplate');
+  if(!saved){alert('模板数据丢失，请重新上传');return;}
+  try{
+    const binary=atob(saved);const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    const rowQty={};
+    for(const m of matchedItems){
+      const r=m.product.row;rowQty[r]=(rowQty[r]||0)+m.qty;
+    }
+    const now=new Date();
+    const mm=(now.getMonth()+1).toString().padStart(2,'0');
+    const dd=now.getDate().toString().padStart(2,'0');
+    const carId=carNo||'';
+    const fileName=carId?`${mm}${dd}-${carId}-${carTrip}.xlsx`:`${mm}${dd}.xlsx`;
+    if(typeof ExcelJS!=='undefined'){
+      const wb=new ExcelJS.Workbook();
+      await wb.xlsx.load(bytes.buffer);
+      const ws=wb.getWorksheet('工作表2');
+      if(!ws){alert('找不到工作表2');return;}
+      for(const p of templateProducts){
+        const cell=ws.getCell(p.row,10);
+        cell.value=null;
+      }
+      for(const [row,qty] of Object.entries(rowQty)){
+        ws.getCell(parseInt(row),10).value=qty;
+      }
+      const out=await wb.xlsx.writeBuffer();
+      const b=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const u=URL.createObjectURL(b);const l=document.createElement('a');
+      l.href=u;l.download=fileName;l.click();URL.revokeObjectURL(u);
+    }else{
+      const wb2=XLSX.read(bytes,{type:'array',cellStyles:true,cellFormula:true});
+      const ws2=wb2.Sheets['工作表2'];
+      if(!ws2){alert('找不到工作表2');return;}
+      for(const p of templateProducts){
+        const addr=XLSX.utils.encode_cell({c:9,r:p.row-1});
+        if(ws2[addr])delete ws2[addr];
+      }
+      for(const [row,qty] of Object.entries(rowQty)){
+        XLSX.utils.sheet_add_aoa(ws2,[[qty]],{origin:XLSX.utils.encode_cell({c:9,r:parseInt(row)-1})});
+      }
+      wb2.Sheets['工作表2']=ws2;
+      const out2=XLSX.write(wb2,{bookType:'xlsx',type:'array'});
+      const b2=new Blob([out2],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const u2=URL.createObjectURL(b2);const l2=document.createElement('a');
+      l2.href=u2;l2.download=fileName;l2.click();URL.revokeObjectURL(u2);
+    }
+    showResult('已下载: '+fileName+(window.__exceljsFailed?'（简化格式，部分样式可能丢失）':''),'导出成功');
+  }catch(e){
+    alert('导出失败: '+e.message);
+    console.error(e);
+  }
+}
+function showResult(msg,title){
+  const c=document.getElementById('resultCard');c.style.display='block';
+  const a=document.getElementById('resultArea');
+  const btn=title?`<button style="float:right;padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--sans)" onclick="copyResult()">复制</button>`:'';
+  a.innerHTML=btn+msg;
+  a.scrollTop=a.scrollHeight;
+}
+function copyResult(){
+  const el=document.getElementById('resultArea');
+  const txt=el.textContent.replace('复制','').trim();
+  const copyBtn=el.querySelector('button');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>{
+      if(copyBtn){const orig=copyBtn.textContent;copyBtn.textContent='已复制';setTimeout(()=>copyBtn.textContent=orig,1500);}
+    }).catch(()=>fallbackCopy(txt,el));
+  }else{
+    fallbackCopy(txt,el);
+  }
+}
+function fallbackCopy(txt,el){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=txt;ta.style.position='fixed';ta.style.left='-9999px';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const copyBtn=el.querySelector('button');
+    if(copyBtn){const orig=copyBtn.textContent;copyBtn.textContent='已复制';setTimeout(()=>copyBtn.textContent=orig,1500);}
+  }catch(e){
+    el.innerHTML='<p style="color:var(--pastel-red-text)">自动复制失败，请长按下方文字选择「复制」：</p>'+
+      `<textarea style="width:100%;height:180px;font-size:13px;padding:8px;box-sizing:border-box" readonly onclick="this.select()">${escHtml(txt)}</textarea>`;
+  }
+}
+function clearMatch(){matchedItems=[];unmatchedItems=[];excludedItems=[];carNo='';carTrip=0;carNoCustomer='';document.getElementById('matchCard').style.display='none';document.getElementById('resultCard').style.display='none';document.getElementById('carNoBar').style.display='none';document.getElementById('diffPanel').style.display='none';saveCarState();}
+function nextOrder(){
+  saveCarState();
+  addCarTab();
+  document.getElementById('imgPreview').style.display='none';
+  document.getElementById('previewImg').src='';
+  document.getElementById('resultCard').style.display='none';
+  document.getElementById('diffPanel').style.display='none';
+}
+function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}}
+function loadSavedTemplate(){
+  const saved=localStorage.getItem('savedTemplate');
+  const name=localStorage.getItem('savedTemplateName');
+  if(!saved||!name)return;
+  try{
+    const binary=atob(saved);const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    templateWB=XLSX.read(bytes,{type:'array',cellStyles:true,cellFormula:true});
+    const ws=templateWB.Sheets['工作表2'];if(!ws)return;
+    templateProducts=parseTemplateProducts(ws);
+    templateFileName=name;buildProdAlts();prodListDirty=true;prodAltsDirty=true;
+    document.getElementById('templateStatus').innerHTML=`<span class="badge badge-green">已加载: ${name} / ${templateProducts.length}个产品</span>`;
+    if(ws['!cols']&&!templateWB._colWidths)templateWB._colWidths=JSON.parse(JSON.stringify(ws['!cols']));
+  }catch(e){console.error('loadSavedTemplate failed',e);document.getElementById('templateStatus').innerHTML='<span class="badge badge-red">模板自动加载失败，请重新上传</span>';}
+}
+initCarTabs();loadLearnedAliases();loadApi();loadSavedTemplate();
+	</script>
+<script>
+if('serviceWorker' in navigator){
+	navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+</script>
+</body></html>

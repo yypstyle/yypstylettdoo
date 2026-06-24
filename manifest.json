@@ -1,0 +1,23 @@
+{
+  "name": "报关初稿生成器",
+  "short_name": "报关生成器",
+  "description": "装车单自动匹配报关产品，生成Excel初稿和微信消息",
+  "start_url": "./报关初稿生成器_v6.4.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080c14",
+  "theme_color": "#00d4ff",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
