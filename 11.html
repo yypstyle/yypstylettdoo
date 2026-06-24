@@ -2079,9 +2079,21 @@ function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElem
 	    // 同步到 localStorage
 	    var bin='';for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
 	    if(bytes.length<=5*1024*1024){localStorage.setItem('savedTemplate',btoa(bin));localStorage.setItem('savedTemplateName','template.xlsx');}
-	  }catch(e){console.log('服务器模板未配置，使用本地缓存');}
-	}
-	function loadSavedTemplate(){
+		  }catch(e){console.log('服务器模板未配置，使用本地缓存');}
+		}
+		async function fetchServerAliases(){
+		  try{
+		    var resp=await fetch('./aliases.json');
+		    if(!resp.ok)return;
+		    var d=await resp.json();
+		    if(d.aliases){Object.assign(learnedAliases,d.aliases);}
+		    else{Object.assign(learnedAliases,d);}
+		    if(d.excludes){for(var i=0;i<d.excludes.length;i++){if(!learnedExcludes.includes(d.excludes[i]))learnedExcludes.push(d.excludes[i]);}}
+		    saveLearnedAliases();refreshLearnUI();
+		    console.log('已加载服务器别名规则');
+		  }catch(e){console.log('服务器别名未配置，使用本地规则');}
+		}
+		function loadSavedTemplate(){
   const saved=localStorage.getItem('savedTemplate');
   const name=localStorage.getItem('savedTemplateName');
   if(!saved||!name)return;
@@ -2096,7 +2108,7 @@ function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElem
     if(ws['!cols']&&!templateWB._colWidths)templateWB._colWidths=JSON.parse(JSON.stringify(ws['!cols']));
   }catch(e){console.error('loadSavedTemplate failed',e);document.getElementById('templateStatus').innerHTML='<span class="badge badge-red">模板自动加载失败，请重新上传</span>';}
 }
-	initCarTabs();loadLearnedAliases();loadApi();loadSavedTemplate();fetchServerTemplate();
+	initCarTabs();loadLearnedAliases();loadApi();loadSavedTemplate();fetchServerTemplate();fetchServerAliases();
 		</script>
 <script>
 if('serviceWorker' in navigator){
