@@ -2063,7 +2063,25 @@ function nextOrder(){
   document.getElementById('diffPanel').style.display='none';
 }
 function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}}
-function loadSavedTemplate(){
+	async function fetchServerTemplate(){
+	  try{
+	    var resp=await fetch('./template.xlsx');
+	    if(!resp.ok)return;
+	    var buf=await resp.arrayBuffer();
+	    var bytes=new Uint8Array(buf);
+	    templateWB=XLSX.read(bytes,{type:'array',cellStyles:true,cellFormula:true});
+	    var ws=templateWB.Sheets['工作表2'];if(!ws)return;
+	    templateProducts=parseTemplateProducts(ws);
+	    templateFileName='template.xlsx（服务器）';
+	    buildProdAlts();prodListDirty=true;prodAltsDirty=true;
+	    document.getElementById('templateStatus').innerHTML='<span class="badge badge-green">已加载: 服务器模板 / '+templateProducts.length+'个产品</span>';
+	    if(ws['!cols']&&!templateWB._colWidths)templateWB._colWidths=JSON.parse(JSON.stringify(ws['!cols']));
+	    // 同步到 localStorage
+	    var bin='';for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+	    if(bytes.length<=5*1024*1024){localStorage.setItem('savedTemplate',btoa(bin));localStorage.setItem('savedTemplateName','template.xlsx');}
+	  }catch(e){console.log('服务器模板未配置，使用本地缓存');}
+	}
+	function loadSavedTemplate(){
   const saved=localStorage.getItem('savedTemplate');
   const name=localStorage.getItem('savedTemplateName');
   if(!saved||!name)return;
@@ -2078,8 +2096,8 @@ function loadSavedTemplate(){
     if(ws['!cols']&&!templateWB._colWidths)templateWB._colWidths=JSON.parse(JSON.stringify(ws['!cols']));
   }catch(e){console.error('loadSavedTemplate failed',e);document.getElementById('templateStatus').innerHTML='<span class="badge badge-red">模板自动加载失败，请重新上传</span>';}
 }
-initCarTabs();loadLearnedAliases();loadApi();loadSavedTemplate();
-	</script>
+	initCarTabs();loadLearnedAliases();loadApi();loadSavedTemplate();fetchServerTemplate();
+		</script>
 <script>
 if('serviceWorker' in navigator){
 	navigator.serviceWorker.register('sw.js').catch(function(){});
