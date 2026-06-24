@@ -2,7 +2,7 @@
 const CACHE_NAME = 'customs-v6.4-v1';
 
 const PRECACHE_URLS = [
-  './报关初稿生成器_v6.4.html',
+  './11.html',
   './manifest.json',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
