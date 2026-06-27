@@ -1400,14 +1400,14 @@ function processMatch(lines){
 }
 function parseLine(s){
   const t=s.trim();if(!t)return null;
-  // ---- 手写 +/- 标注处理（仓库图片OCR常见）----
-  let adj=0;
-  let l2=t.replace(/[+-＋﹣−–—]\s*(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?\s*$/g,function(m,num,u){
-    let v=parseFloat(num);
-    if(u==='板')v*=30;else if(u==='半板')v*=15;
-    adj=m[0]==='-'||m[0]==='﹣'||m[0]==='−'||m[0]==='–'||m[0]==='—'?-Math.round(v):Math.round(v);
-    return ' ';
-  });
+	  // ---- 手写 +/- 标注处理（仅匹配行首或空格后的+/-）----
+	  let adj=0;
+	  let l2=t.replace(/(?:^|\s)[+-＋﹣−–—]\s*(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?\s*$/g,function(m,num,u){
+	    let v=parseFloat(num);
+	    if(u==='板')v*=30;else if(u==='半板')v*=15;
+	    adj=m.trim()[0]==='-'||m.trim()[0]==='﹣'||m.trim()[0]==='−'||m.trim()[0]==='–'||m.trim()[0]==='—'?-Math.round(v):Math.round(v);
+	    return ' ';
+	  });
   if(adj!==0)l2=l2.trim();
 
   let color='';
