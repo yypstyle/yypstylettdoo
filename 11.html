@@ -1262,11 +1262,27 @@ function cleanText(text){
 		    // 当前行纯数字、下一行有中文 → 合并（数量在前、产品在后）
 		    }else if(/^\d+$/.test(cur)&&/[\u4e00-\u9fff]/.test(next)&&!/^\d{4}[-\/]/.test(next)){
 		      merged.push(cur+' '+next);i++;
+		    // 纯数字+手写调整："56"→"+28"→合并为"56 +28"
+		    }else if(/^\d+$/.test(cur)&&/^[+\-＋﹣−–—]\d+/.test(next)){
+		      merged.push(cur+' '+next.replace(/[＋﹣]/g,'+'));i++;
+		    // 当前行纯 +/-调整数、下一行有产品 → 合并
+		    }else if(/^[+\-＋﹣−–—]\d+$/.test(cur)&&!/^\d{4}/.test(next)){
+		      merged.push(next+' '+cur);i++;
 	    }else{
 	      merged.push(cur);
 	    }
+		}
+	  // ---- 后处理：合并"56 +28"与下一行产品名 → "X11. 56 +28" ----
+	  const final=[];
+	  for(let i=0;i<merged.length;i++){
+	    const cur=merged[i];const next=i+1<merged.length?merged[i+1]:'';
+	    if(/^\d+\s+[+\-]/.test(cur)&&next&&/^[\u4e00-\u9fffA-Z].*[^+\-]$/.test(next)&&!/\d/.test(next.split(/\s+/)[0])){
+	      final.push(next+' '+cur);i++;
+	    }else{
+	      final.push(cur);
+	    }
 	  }
-	  return merged.map(l=>{
+	  return final.map(l=>{
 	    let s=l.trim();
 	    if(!s)return '';
 		    // ---- OCR 常见错字纠正 ----
@@ -1280,6 +1296,8 @@ function cleanText(text){
 		    if(/^[^\u4e00-\u9fff]{1,5}$/.test(s)&&!/[a-zA-Z]{2,}\d/.test(s))return '';
 		    // 相机水印/日期戳/页脚噪声
 		    if(/^(HUAWEI|iPhone|Samsung|Xiaomi|OPPO|vivo|拍照|拍摄|相片|图片|日期|时间|次\d|级更|发票|第[一二三四五六七八九十\d]+(页|張|张))/.test(s))return '';
+		    // 打印模板标题行（装车单固定文字，不是产品数据）
+		    if(/^(数量|型号|客戶|客户|装车单|裝車單|车次|車次|日期\s*[:：]?|安達發票|安達发票)$/.test(s))return '';
 		    // 页眉噪声（短纯数字+后面有中文标题的行已经在上一步被合并了）
 		    if(/^[a-z]+[/]/.test(s))return '';
     if(/^[\u4e00-\u9fff]+[:：]$/.test(s))return '';
