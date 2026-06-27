@@ -1281,7 +1281,7 @@ function cleanText(text){
 	    if(m){let q=m[2]==='板'?30:15;return `${m[1].trim()} ${q}箱`;}
 	    m=s.match(/^(.+?)(\d+\.?\d*)$/);
 	    if(m){let q=parseFloat(m[2]);if(q>0)return `${m[1].trim()} ${q}箱`;}
-	    m=s.match(/^(.+?)(\d+\.?\d*)(板|半板|箱|件|个)$/);
+	    m=s.match(/^(.+?[^\d\-])(\d+\.?\d*)(板|半板|箱|件|个)$/);
 	    if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;return `${m[1].trim()} ${Math.round(q)}箱`;}
 	    m=s.match(/^(.+)\s+(\d+)$/);
 	    if(m)return `${m[1].trim()} ${m[2]}箱`;
@@ -1437,7 +1437,7 @@ function parseLine(s){
 	  if(m){let q=parseFloat(m[2]);const u=m[3]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;q=Math.max(0,Math.round(q)+adj);return {name:m[1].trim(),qty:q};}
 	  m=l.match(/^(.+?)(\d+\.?\d*)$/);
 	  if(m){let q=parseFloat(m[2]);if(q>0){q=Math.max(0,Math.round(q)+adj);return {name:m[1].trim(),qty:q};}}
-	  m=l.match(/^(.+?)(\d+\.?\d*)(板|半板|箱)$/);
+	  m=l.match(/^(.+?[^\d\-])(\d+\.?\d*)(板|半板|箱)$/);
 	  if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;q=Math.max(0,Math.round(q)+adj);return {name:m[1].trim(),qty:q};}
 	  // 如果只有手写 +/- 标注没有产品名（单独一行 "+5"）
 	  if(adj!==0&&!l.trim())return null;
