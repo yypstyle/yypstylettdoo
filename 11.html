@@ -338,6 +338,7 @@ textarea::placeholder{color:var(--text-tri)}
   <div class="btn-row">
     <button class="btn btn-primary" onclick="parseText()" id="btnParse">解析装车单</button>
     <button class="btn btn-secondary" onclick="ocrImage()" id="btnOcr">OCR 识别</button>
+    <button class="btn btn-secondary" onclick="aiCleanOCR()" id="btnAiClean" style="display:none;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;box-shadow:0 2px 12px rgba(99,102,241,.25)">🤖 AI 整理</button>
   </div>
 </div>
 <div class="card" id="matchCard" style="display: block;">
@@ -1379,6 +1380,7 @@ function cleanText(text){
 	    if(!txt||!txt.trim()){alert('OCR识别结果为空，请检查图片质量');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
 	    document.getElementById('inputText').value=txt.replace(/[|:]/g,' ').replace(/\s+/g,'\n').trim();
 	    document.getElementById('ocrStatus').innerHTML='<span class="badge badge-green">OCR 完成</span>';
+	    document.getElementById('btnAiClean').style.display='inline-flex';
 	    doClean(document.getElementById('inputText').value);
 	  }catch(e){
 	    var msg=e.message||'';
@@ -1387,9 +1389,39 @@ function cleanText(text){
 	    else alert('OCR失败: '+msg);
 	  }
 	  document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';
-}
+	}
 
-function doClean(text){
+	async function aiCleanOCR(){
+	  var raw=document.getElementById('inputText').value.trim();
+	  if(!raw){alert('没有OCR识别结果可整理');return;}
+	  var key=localStorage.getItem('zk');if(!key){alert('AI整理需要API Key\n请在API设置中配置（GLM免费/DeepSeek均可）');return;}
+	  document.getElementById('btnAiClean').disabled=true;document.getElementById('btnAiClean').textContent='AI整理中...';
+	  try{
+	    var prompt='你是装车单整理助手。以下是装车单OCR结果（双栏排版，很乱），请整理为标准格式：每行「产品名 数量箱」。\n'+
+	      '规则：去掉标题日期页码；合并拆开行；手写+/-合并计算；保留产品原名。\nOCR原文：\n'+raw+'\n\n只输出产品清单：';
+	    // 优先用GLM-4-Flash（免费），不可用则回退DeepSeek
+	    var r=await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions',{
+	      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+	      body:JSON.stringify({model:'glm-4-flash',messages:[{role:'user',content:prompt}],temperature:0})
+	    });
+	    if(!r.ok){
+	      // GLM失败，尝试DeepSeek
+	      r=await fetch('https://api.deepseek.com/chat/completions',{
+	        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+	        body:JSON.stringify({model:'deepseek-chat',messages:[{role:'user',content:prompt}],temperature:0})
+	      });
+	    }
+	    var d=await r.json();
+	    if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+	    var txt=d.choices[0].message.content;
+	    document.getElementById('inputText').value=txt.trim();
+	    document.getElementById('ocrStatus').innerHTML='<span class="badge badge-green">AI整理完成</span>';
+	    doClean(txt);
+	  }catch(e){alert('AI整理失败: '+(e.message||e));}
+	  document.getElementById('btnAiClean').disabled=false;document.getElementById('btnAiClean').textContent='🤖 AI 整理';
+	}
+
+	function doClean(text){
   const rawLines=text.split('\n').filter(l=>l.trim());
   const cleaned=cleanText(text);
   // 不覆写textarea！保持原文，避免二次清洗丢失行数
