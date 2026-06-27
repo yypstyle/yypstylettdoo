@@ -1235,11 +1235,46 @@ function cleanText(text){
     }
   }else{
     document.getElementById('carNoBar').style.display='none';
-  }
-  return text.split('\n').map(l=>{
-    let s=l.trim();
-    if(!s)return '';
-    if(/^[-=*]{2,}$/.test(s)||/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(s)||/^[a-z]+[/]/.test(s))return '';
+	 }
+	  // ---- OCR预处理：合并被拆分的行（产品名一行、数量下一行）----
+	  const lines=text.split('\n');
+	  // 先展开双栏混行："H750 20箱  H650 2板" → 拆为两行
+	  const expanded=[];
+	  for(let i=0;i<lines.length;i++){
+	    const cur=lines[i].trim();if(!cur){expanded.push(cur);continue;}
+	    // 检测：一行内有两个"产品名 数字(单位)"模式 → 双栏合并
+	    const parts=cur.split(/\s{2,}/); // 两个空格以上作为列分隔
+	    if(parts.length===2){
+	      const p1=/^[\u4e00-\u9fffA-Za-z].*\d+/.test(parts[0].trim());
+	      const p2=/^[\u4e00-\u9fffA-Za-z].*\d+/.test(parts[1].trim());
+	      if(p1&&p2){expanded.push(parts[0].trim());expanded.push(parts[1].trim());continue;}
+	    }
+	    expanded.push(cur);
+	  }
+	  // ---- 合并被拆分的行（产品名一行、数量下一行）----
+	  const merged=[];
+	  for(let i=0;i<expanded.length;i++){
+	    const cur=expanded[i].trim();if(!cur)continue;
+	    const next=i+1<lines.length?lines[i+1].trim():'';
+	    // 当前行无数字、下一行纯数字+单位 → 合并
+	    if(!/\d/.test(cur)&&/^\d+\.?\d*\s*(箱|板|半板|件|个|隻)?$/.test(next)){
+	      merged.push(cur+' '+next);i++;
+	    }else{
+	      merged.push(cur);
+	    }
+	  }
+	  return merged.map(l=>{
+	    let s=l.trim();
+	    if(!s)return '';
+	    // ---- OCR 常见错字纠正 ----
+	    const fixOCR={'相':'箱','葙':'箱','椀':'碗','豌':'碗','益':'盖','盍':'盖','扳':'板','版':'板','析':'折','逗':'透'};
+	    s=s.replace(/./g,c=>fixOCR[c]||c);
+	    // ---- OCR 常见噪声行过滤 ----
+	    if(/^[-=*]{2,}$/.test(s)||/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(s)||/^[a-z]+[/]/.test(s))return '';
+	    // 纯符号/纯英文短行（OCR 幻觉）
+	    if(/^[^\u4e00-\u9fff]{1,5}$/.test(s)&&!/[a-zA-Z]{2,}\d/.test(s))return '';
+	    // 相机水印/日期戳
+	    if(/^(HUAWEI|iPhone|Samsung|Xiaomi|OPPO|vivo|拍照|拍摄|相片|图片|日期|时间|第[一二三四五六七八九十\d]+(页|張|张))/.test(s))return '';
     if(/^[\u4e00-\u9fff]+[:：]$/.test(s))return '';
     const carSuffix=s.replace(/\s*(19|21|67).*$/,'').trim();
     if(CUSTOMERS.includes(s)||CUSTOMERS.includes(carSuffix))return '';
@@ -1369,8 +1404,18 @@ function processMatch(lines){
 }
 function parseLine(s){
   const t=s.trim();if(!t)return null;
+  // ---- 手写 +/- 标注处理（仓库图片OCR常见）----
+  let adj=0;
+  let l2=t.replace(/[+-＋﹣−–—]\s*(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?\s*$/g,function(m,num,u){
+    let v=parseFloat(num);
+    if(u==='板')v*=30;else if(u==='半板')v*=15;
+    adj=m[0]==='-'||m[0]==='﹣'||m[0]==='−'||m[0]==='–'||m[0]==='—'?-Math.round(v):Math.round(v);
+    return ' ';
+  });
+  if(adj!==0)l2=l2.trim();
+
   let color='';
-  let l=t.replace(/[（(「](白色|白|透明|透|黑色|黑|明)[）)」]/g,function(m,p1){
+  let l=l2.replace(/[（(「](白色|白|透明|透|黑色|黑|明)[）)」]/g,function(m,p1){
     if(p1==='明'||p1==='透明'||p1==='透')color='';
     else if(p1==='白'||p1==='白色')color='白色';
     else if(p1==='黑'||p1==='黑色')color='黑';
@@ -1386,19 +1431,21 @@ function parseLine(s){
       else l=l+'黑';
     }else l=color+l;
   }
-  let m=l.match(/^(.+)\s+(\d+\.?\d*)\s*(板|半板|箱|件|个|隻|条|條|捆)?\s*$/);
-  if(m){let q=parseFloat(m[2]);const u=m[3]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;return {name:m[1].trim(),qty:Math.round(q)};}
-  m=l.match(/^(\d+)\s+(.+?)\s+(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?\s*$/);
-  if(m){let q=parseFloat(m[3]);const u=m[4]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;return {name:m[2].trim(),qty:Math.round(q)};}
-  m=l.match(/^(.+)\s+(半板|板)$/);
-  if(m){let q=m[2]==='板'?30:15;return {name:m[1].trim(),qty:q};}
-  m=l.match(/^(.+)\s+[xX×]\s*(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?$/);
-  if(m){let q=parseFloat(m[2]);const u=m[3]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;return {name:m[1].trim(),qty:Math.round(q)};}
-  m=l.match(/^(.+?)(\d+\.?\d*)$/);
-  if(m){let q=parseFloat(m[2]);if(q>0)return {name:m[1].trim(),qty:Math.round(q)};}
-  m=l.match(/^(.+?)(\d+\.?\d*)(板|半板|箱)$/);
-  if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;return {name:m[1].trim(),qty:Math.round(q)};}
-  return null;
+	let m=l.match(/^(.+)\s+(\d+\.?\d*)\s*(板|半板|箱|件|个|隻|条|條|捆)?\s*$/);
+	  if(m){let q=parseFloat(m[2]);const u=m[3]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;q=Math.max(0,Math.round(q)+adj);return {name:m[1].trim(),qty:q};}
+	  m=l.match(/^(\d+)\s+(.+?)\s+(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?\s*$/);
+	  if(m){let q=parseFloat(m[3]);const u=m[4]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;q=Math.max(0,Math.round(q)+adj);return {name:m[2].trim(),qty:q};}
+	  m=l.match(/^(.+)\s+(半板|板)$/);
+	  if(m){let q=m[2]==='板'?30:15;q=Math.max(0,q+adj);return {name:m[1].trim(),qty:q};}
+	  m=l.match(/^(.+)\s+[xX×]\s*(\d+\.?\d*)\s*(板|半板|箱|件|个|隻)?$/);
+	  if(m){let q=parseFloat(m[2]);const u=m[3]||'箱';if(u==='板')q*=30;else if(u==='半板')q*=15;q=Math.max(0,Math.round(q)+adj);return {name:m[1].trim(),qty:q};}
+	  m=l.match(/^(.+?)(\d+\.?\d*)$/);
+	  if(m){let q=parseFloat(m[2]);if(q>0){q=Math.max(0,Math.round(q)+adj);return {name:m[1].trim(),qty:q};}}
+	  m=l.match(/^(.+?)(\d+\.?\d*)(板|半板|箱)$/);
+	  if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;q=Math.max(0,Math.round(q)+adj);return {name:m[1].trim(),qty:q};}
+	  // 如果只有手写 +/- 标注没有产品名（单独一行 "+5"）
+	  if(adj!==0&&!l.trim())return null;
+	  return null;
 }
 function matchProduct(inputName,rawLine){
   let c=inputName.trim();if(!c)return null;
