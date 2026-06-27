@@ -1255,10 +1255,13 @@ function cleanText(text){
 	  const merged=[];
 	  for(let i=0;i<expanded.length;i++){
 	    const cur=expanded[i].trim();if(!cur)continue;
-	    const next=i+1<lines.length?lines[i+1].trim():'';
-	    // 当前行无数字、下一行纯数字+单位 → 合并
-	    if(!/\d/.test(cur)&&/^\d+\.?\d*\s*(箱|板|半板|件|个|隻)?$/.test(next)){
-	      merged.push(cur+' '+next);i++;
+		    const next=i+1<expanded.length?expanded[i+1].trim():'';
+		    // 当前行无数字、下一行纯数字+单位 → 合并
+		    if(!/\d/.test(cur)&&/^\d+\.?\d*\s*(箱|板|半板|件|个|隻)?$/.test(next)){
+		      merged.push(cur+' '+next);i++;
+		    // 当前行纯数字、下一行有中文 → 合并（数量在前、产品在后）
+		    }else if(/^\d+$/.test(cur)&&/[\u4e00-\u9fff]/.test(next)&&!/^\d{4}[-\/]/.test(next)){
+		      merged.push(cur+' '+next);i++;
 	    }else{
 	      merged.push(cur);
 	    }
@@ -1266,15 +1269,19 @@ function cleanText(text){
 	  return merged.map(l=>{
 	    let s=l.trim();
 	    if(!s)return '';
-	    // ---- OCR 常见错字纠正 ----
-	    const fixOCR={'相':'箱','葙':'箱','椀':'碗','豌':'碗','益':'盖','盍':'盖','扳':'板','版':'板','析':'折','逗':'透'};
-	    s=s.replace(/./g,c=>fixOCR[c]||c);
-	    // ---- OCR 常见噪声行过滤 ----
-	    if(/^[-=*]{2,}$/.test(s)||/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(s)||/^[a-z]+[/]/.test(s))return '';
-	    // 纯符号/纯英文短行（OCR 幻觉）
-	    if(/^[^\u4e00-\u9fff]{1,5}$/.test(s)&&!/[a-zA-Z]{2,}\d/.test(s))return '';
-	    // 相机水印/日期戳
-	    if(/^(HUAWEI|iPhone|Samsung|Xiaomi|OPPO|vivo|拍照|拍摄|相片|图片|日期|时间|第[一二三四五六七八九十\d]+(页|張|张))/.test(s))return '';
+		    // ---- OCR 常见错字纠正 ----
+		    const fixOCR={'相':'箱','葙':'箱','椀':'碗','豌':'碗','菱':'碗','益':'盖','盍':'盖','扳':'板','版':'板','析':'折','逗':'透','庄':'板','桩':'板','装':'板','1912b':'1813','级更':''};
+		    s=s.replace(/./g,c=>fixOCR[c]||c).replace(/[。．.]$/,'');
+		    // ---- OCR 常见噪声行过滤 ----
+		    if(/^[-=*]{2,}$/.test(s)||/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(s))return '';
+		    // 纯数字行（页号/编号如 178、#015609）
+		    if(/^#?\d{1,6}$/.test(s))return '';
+		    // 纯符号/纯英文短行（OCR 幻觉）
+		    if(/^[^\u4e00-\u9fff]{1,5}$/.test(s)&&!/[a-zA-Z]{2,}\d/.test(s))return '';
+		    // 相机水印/日期戳/页脚噪声
+		    if(/^(HUAWEI|iPhone|Samsung|Xiaomi|OPPO|vivo|拍照|拍摄|相片|图片|日期|时间|次\d|级更|发票|第[一二三四五六七八九十\d]+(页|張|张))/.test(s))return '';
+		    // 页眉噪声（短纯数字+后面有中文标题的行已经在上一步被合并了）
+		    if(/^[a-z]+[/]/.test(s))return '';
     if(/^[\u4e00-\u9fff]+[:：]$/.test(s))return '';
     const carSuffix=s.replace(/\s*(19|21|67).*$/,'').trim();
     if(CUSTOMERS.includes(s)||CUSTOMERS.includes(carSuffix))return '';
