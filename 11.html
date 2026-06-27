@@ -248,14 +248,22 @@ textarea::placeholder{color:var(--text-tri)}
 </div>
 <div id="apiPanel" class="card" style="display:none;margin-top:-4px">
   <div class="api-row">
-    <select id="apiProvider" style="flex:0 0 100px" onchange="toggleApiFields()">
-      <option value="deepseek">DeepSeek</option>
-      <option value="glm">GLM(智谱)</option>
-    </select>
-    <input type="password" id="apiKey" placeholder="API Key">
-    <button class="btn btn-sm btn-primary" onclick="saveApi()">保存</button>
-  </div>
-  <div id="deepseekFields" style="display: block;">
+	    <select id="apiProvider" style="flex:0 0 100px" onchange="toggleApiFields()">
+	      <option value="deepseek">DeepSeek</option>
+	      <option value="glm">GLM(智谱)</option>
+	      <option value="paddle">PaddleOCR</option>
+	    </select>
+	    <input type="password" id="apiKey" placeholder="API Key" style="flex:2">
+	    <button class="btn btn-sm btn-primary" onclick="saveApi()">保存</button>
+	  </div>
+	  <div class="api-row" id="paddleRow" style="display:none">
+	    <input type="text" id="paddleUrl" placeholder="PaddleOCR 服务地址: http://IP:9000/ocr" style="flex:1">
+	  </div>
+	  <div id="paddleFields" style="display:none;">
+	    <div class="hint">自建 PaddleOCR 服务，无需 API Key</div>
+	    <div class="hint" style="margin-top:2px">部署方法见 ocr-server 目录</div>
+	  </div>
+	  <div id="deepseekFields" style="display: block;">
     <div class="hint">端点: api.deepseek.com / 模型: deepseek-chat</div>
   </div>
   <div id="glmFields" style="display: none;">
@@ -967,9 +975,10 @@ function renderCarTabs(){ // TODO: 增量更新优化，当前Tab数量<10，重
 
 // API
 function getApiKey(){return localStorage.getItem('zk')||'';}
-function toggleApiFields(){const p=document.getElementById('apiProvider').value;document.getElementById('deepseekFields').style.display=p==='deepseek'?'block':'none';document.getElementById('glmFields').style.display=p==='glm'?'block':'none';}
-function saveApi(){const k=document.getElementById('apiKey').value.trim();const p=document.getElementById('apiProvider').value;if(k){localStorage.setItem('zk',k);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';const warnEl=document.getElementById('apiWarn');if(!warnEl){const w=document.createElement('div');w.id='apiWarn';w.className='hint';w.style.color='var(--amber)';w.textContent='⚠ Key将以明文存储在浏览器本地，请勿在公共设备上保存';document.getElementById('apiPanel').appendChild(w);}}}
-function getApiProvider(){return localStorage.getItem('ai_provider')||'deepseek';}
+	function toggleApiFields(){const p=document.getElementById('apiProvider').value;document.getElementById('deepseekFields').style.display=p==='deepseek'?'block':'none';document.getElementById('glmFields').style.display=p==='glm'?'block':'none';document.getElementById('paddleFields').style.display=p==='paddle'?'block':'none';document.getElementById('paddleRow').style.display=p==='paddle'?'flex':'none';}
+	function saveApi(){const k=document.getElementById('apiKey').value.trim();const p=document.getElementById('apiProvider').value;const pu=document.getElementById('paddleUrl').value.trim();if(p==='paddle'){if(!pu)return;localStorage.setItem('paddle_url',pu);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';return;}if(k){localStorage.setItem('zk',k);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';const warnEl=document.getElementById('apiWarn');if(!warnEl){const w=document.createElement('div');w.id='apiWarn';w.className='hint';w.style.color='var(--amber)';w.textContent='⚠ Key将以明文存储在浏览器本地，请勿在公共设备上保存';document.getElementById('apiPanel').appendChild(w);}}}
+	function getApiProvider(){return localStorage.getItem('ai_provider')||'deepseek';}
+	function getPaddleUrl(){return localStorage.getItem('paddle_url')||'';}
 function toggleApi(){const p=document.getElementById('apiPanel');p.style.display=p.style.display==='none'?'block':'none';}
 
 function parseTemplateProducts(ws){
@@ -1279,30 +1288,44 @@ function cleanText(text){
   }).filter(Boolean);
 }
 
-async function ocrImage(){
-  if(!imgBase64){alert('请先选择图片');return;}
-  const key=localStorage.getItem('zk');if(!key){alert('请先设置API Key');return;}
-  if(getApiProvider()!=='glm'){alert('OCR功能需要GLM API Key，请在API设置中选择GLM(智谱)并填入Key');return;}
-  document.getElementById('btnOcr').disabled=true;document.getElementById('btnOcr').textContent='识别中...';
-  try{
-    const r=await fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'glm-ocr',file:`data:image/jpeg;base64,${imgBase64}`})});
-    const d=await r.json();if(d.error)throw new Error(JSON.stringify(d.error));
-    let txt='';
-    if(d.layout_details)for(const dt of d.layout_details)if(dt.content)txt+=dt.content.replace(/<[^>]+>/g,' ')+'\n';
-    if(d.markdown_result){
-      const md=d.markdown_result.replace(/[#*\[\]]/g,'');
-      txt=md.replace(/^[\-\+\*]\s+|^\d+\.\s+/gm,'').trim();
-    }
-    if(!txt||!txt.trim()){alert('OCR识别结果为空，请检查图片质量');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
-    document.getElementById('inputText').value = txt.replace(/[|:]/g,' ').replace(/\s+/g,'\n').trim();
-    document.getElementById('ocrStatus').innerHTML='<span class="badge badge-green">OCR 完成</span>';
-    doClean(document.getElementById('inputText').value);
-  }catch(e){
-    const msg=e.message||'';
-    if(msg.includes('401'))alert('OCR失败: GLM API Key无效或已过期\n请点击 API设置，选择 GLM，填入正确的 GLM Key');
-    else alert('OCR失败: '+msg);
-  }
-  document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';
+	async function ocrImage(){
+	  if(!imgBase64){alert('请先选择图片');return;}
+	  var provider=getApiProvider();
+	  var key=localStorage.getItem('zk');
+	  if(provider!=='paddle'&&!key){alert('请先设置API Key');return;}
+
+	  document.getElementById('btnOcr').disabled=true;document.getElementById('btnOcr').textContent='识别中...';
+	  try{
+	    var txt='';
+	    if(provider==='paddle'){
+	      // PaddleOCR 自建服务
+	      var pu=getPaddleUrl();if(!pu){alert('请先填写PaddleOCR服务地址');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
+	      var r=await fetch(pu,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:imgBase64})});
+	      var d=await r.json();
+	      if(!d.success){throw new Error(d.detail||'OCR服务返回失败');}
+	      txt=d.text||'';
+	    }else if(provider==='glm'){
+	      // GLM-4V API
+	      var r=await fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'glm-ocr',file:'data:image/jpeg;base64,'+imgBase64})});
+	      var d=await r.json();if(d.error)throw new Error(JSON.stringify(d.error));
+	      if(d.layout_details)for(var i=0;i<d.layout_details.length;i++)if(d.layout_details[i].content)txt+=d.layout_details[i].content.replace(/<[^>]+>/g,' ')+'\n';
+	      if(d.markdown_result){var md=d.markdown_result.replace(/[#*\[\]]/g,'');txt=md.replace(/^[\-\+\*]\s+|^\d+\.\s+/gm,'').trim();}
+	    }else{
+	      // DeepSeek 不支持 OCR
+	      alert('OCR识别需要 GLM(智谱) 或 PaddleOCR\n请在API设置中选择');
+	      document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;
+	    }
+	    if(!txt||!txt.trim()){alert('OCR识别结果为空，请检查图片质量');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
+	    document.getElementById('inputText').value=txt.replace(/[|:]/g,' ').replace(/\s+/g,'\n').trim();
+	    document.getElementById('ocrStatus').innerHTML='<span class="badge badge-green">OCR 完成</span>';
+	    doClean(document.getElementById('inputText').value);
+	  }catch(e){
+	    var msg=e.message||'';
+	    if(msg.includes('401'))alert('OCR失败: API Key无效或已过期');
+	    else if(msg.includes('Failed to fetch')||msg.includes('NetworkError'))alert('OCR失败: 无法连接PaddleOCR服务\n请检查服务是否启动，地址是否正确');
+	    else alert('OCR失败: '+msg);
+	  }
+	  document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';
 }
 
 function doClean(text){
@@ -2062,7 +2085,7 @@ function nextOrder(){
   document.getElementById('resultCard').style.display='none';
   document.getElementById('diffPanel').style.display='none';
 }
-function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}}
+	function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(p==='paddle'){document.getElementById('paddleUrl').value=getPaddleUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}}
 	async function fetchServerTemplate(){
 	  try{
 	    var resp=await fetch('./template.xlsx');
