@@ -1306,11 +1306,14 @@ function cleanText(text){
 	      if(!d.success){throw new Error(d.detail||'OCR服务返回失败');}
 	      txt=d.text||'';
 	    }else if(provider==='glm'){
-	      // GLM-4V API
-	      var r=await fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'glm-ocr',file:'data:image/jpeg;base64,'+imgBase64})});
-	      var d=await r.json();if(d.error)throw new Error(JSON.stringify(d.error));
+	      // GLM-OCR API
+	      var r=await fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'glm-ocr',file:imgBase64})});
+	      var d=await r.json();
+	      console.log('GLM-OCR response:',JSON.stringify(d).substring(0,500));
+	      if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
 	      if(d.layout_details)for(var i=0;i<d.layout_details.length;i++)if(d.layout_details[i].content)txt+=d.layout_details[i].content.replace(/<[^>]+>/g,' ')+'\n';
 	      if(d.markdown_result){var md=d.markdown_result.replace(/[#*\[\]]/g,'');txt=md.replace(/^[\-\+\*]\s+|^\d+\.\s+/gm,'').trim();}
+	      if(d.choices&&d.choices[0]&&d.choices[0].message)txt=d.choices[0].message.content||'';
 	    }else{
 	      // DeepSeek 不支持 OCR
 	      alert('OCR识别需要 GLM(智谱) 或 PaddleOCR\n请在API设置中选择');
