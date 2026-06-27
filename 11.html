@@ -1307,7 +1307,7 @@ function cleanText(text){
 	      txt=d.text||'';
 	    }else if(provider==='glm'){
 	      // GLM-OCR API
-	      var r=await fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'glm-ocr',file:imgBase64})});
+	      var r=await fetch('https://open.bigmodel.cn/api/paas/v4/layout_parsing',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'glm-ocr',file:'data:image/jpeg;base64,'+imgBase64})});
 	      var d=await r.json();
 	      console.log('GLM-OCR response:',JSON.stringify(d).substring(0,500));
 	      if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
