@@ -251,10 +251,18 @@ textarea::placeholder{color:var(--text-tri)}
 	    <select id="apiProvider" style="flex:0 0 100px" onchange="toggleApiFields()">
 	      <option value="deepseek">DeepSeek</option>
 	      <option value="glm">GLM(智谱)</option>
+	      <option value="aivision">AI Vision</option>
 	      <option value="paddle">PaddleOCR</option>
 	    </select>
 	    <input type="password" id="apiKey" placeholder="API Key" style="flex:2">
 	    <button class="btn btn-sm btn-primary" onclick="saveApi()">保存</button>
+	  </div>
+	  <div class="api-row" id="aivisionRow" style="display:none">
+	    <input type="text" id="aivisionUrl" placeholder="AI Vision 地址: http://IP:3000/api/analyze" style="flex:1">
+	  </div>
+	  <div id="aivisionFields" style="display:none;">
+	    <div class="hint">本地 AI Vision 服务器（DeepSeek 识图）</div>
+	    <div class="hint" style="margin-top:2px">无需 API Key，需电脑运行 server.js</div>
 	  </div>
 	  <div class="api-row" id="paddleRow" style="display:none">
 	    <input type="text" id="paddleUrl" placeholder="PaddleOCR 服务地址: http://IP:9000/ocr" style="flex:1">
@@ -976,11 +984,12 @@ function renderCarTabs(){ // TODO: 增量更新优化，当前Tab数量<10，重
 /* ===== Tab管理结束 ===== */
 
 // API
-function getApiKey(){return localStorage.getItem('zk')||'';}
-	function toggleApiFields(){const p=document.getElementById('apiProvider').value;document.getElementById('deepseekFields').style.display=p==='deepseek'?'block':'none';document.getElementById('glmFields').style.display=p==='glm'?'block':'none';document.getElementById('paddleFields').style.display=p==='paddle'?'block':'none';document.getElementById('paddleRow').style.display=p==='paddle'?'flex':'none';}
-	function saveApi(){const k=document.getElementById('apiKey').value.trim();const p=document.getElementById('apiProvider').value;const pu=document.getElementById('paddleUrl').value.trim();if(p==='paddle'){if(!pu)return;localStorage.setItem('paddle_url',pu);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';return;}if(k){localStorage.setItem('zk',k);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';const warnEl=document.getElementById('apiWarn');if(!warnEl){const w=document.createElement('div');w.id='apiWarn';w.className='hint';w.style.color='var(--amber)';w.textContent='⚠ Key将以明文存储在浏览器本地，请勿在公共设备上保存';document.getElementById('apiPanel').appendChild(w);}}}
+	function getApiKey(){return localStorage.getItem('zk')||'';}
+	function toggleApiFields(){const p=document.getElementById('apiProvider').value;document.getElementById('deepseekFields').style.display=p==='deepseek'?'block':'none';document.getElementById('glmFields').style.display=p==='glm'?'block':'none';document.getElementById('paddleFields').style.display=p==='paddle'?'block':'none';document.getElementById('paddleRow').style.display=p==='paddle'?'flex':'none';document.getElementById('aivisionFields').style.display=p==='aivision'?'block':'none';document.getElementById('aivisionRow').style.display=p==='aivision'?'flex':'none';}
+	function saveApi(){const k=document.getElementById('apiKey').value.trim();const p=document.getElementById('apiProvider').value;const pu=document.getElementById('paddleUrl').value.trim();const au=document.getElementById('aivisionUrl').value.trim();if(p==='paddle'){if(!pu)return;localStorage.setItem('paddle_url',pu);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';return;}if(p==='aivision'){if(!au)return;localStorage.setItem('aivision_url',au);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';return;}if(k){localStorage.setItem('zk',k);localStorage.setItem('ai_provider',p);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';const warnEl=document.getElementById('apiWarn');if(!warnEl){const w=document.createElement('div');w.id='apiWarn';w.className='hint';w.style.color='var(--amber)';w.textContent='⚠ Key将以明文存储在浏览器本地，请勿在公共设备上保存';document.getElementById('apiPanel').appendChild(w);}}}
 	function getApiProvider(){return localStorage.getItem('ai_provider')||'deepseek';}
 	function getPaddleUrl(){return localStorage.getItem('paddle_url')||'';}
+	function getAivisionUrl(){return localStorage.getItem('aivision_url')||'http://192.168.3.13:3000/api/analyze';}
 function toggleApi(){const p=document.getElementById('apiPanel');p.style.display=p.style.display==='none'?'block':'none';}
 
 function parseTemplateProducts(ws){
@@ -1289,16 +1298,24 @@ function cleanText(text){
 	  }).filter(Boolean);
 	}
 	
-	async function ocrImage(){
-	  if(!imgBase64){alert('请先选择图片');return;}
-	  var provider=getApiProvider();
-	  var key=localStorage.getItem('zk');
-	  if(provider!=='paddle'&&!key){alert('请先设置API Key');return;}
+		async function ocrImage(){
+		  if(!imgBase64){alert('请先选择图片');return;}
+		  var provider=getApiProvider();
+		  var key=localStorage.getItem('zk');
+		  if(provider!=='paddle'&&provider!=='aivision'&&!key){alert('请先设置API Key');return;}
 
-	  document.getElementById('btnOcr').disabled=true;document.getElementById('btnOcr').textContent='识别中...';
-	  try{
-	    var txt='';
-	    if(provider==='paddle'){
+		  document.getElementById('btnOcr').disabled=true;document.getElementById('btnOcr').textContent='识别中...';
+		  try{
+		    var txt='';
+		    if(provider==='aivision'){
+		      // AI Vision 本地服务器（DeepSeek 识图）
+		      var au=getAivisionUrl();if(!au){alert('请先填写AI Vision服务器地址');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
+		      var prompt='请识别这张装车单图片中的所有文字，按从上到下、从左到右的顺序输出。每行格式：产品型号 数量。忽略页码、日期、标题、签名等无关内容。如果看不清手写 +/- 标注，请一并识别并附在原数量后面。';
+		      var r=await fetch(au,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:imgBase64,prompt:prompt,mimeType:'image/jpeg'})});
+		      var d=await r.json();
+		      if(d.error)throw new Error(d.error);
+		      txt=d.result||'';
+		    }else if(provider==='paddle'){
 	      // PaddleOCR 自建服务
 	      var pu=getPaddleUrl();if(!pu){alert('请先填写PaddleOCR服务地址');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
 	      var r=await fetch(pu,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:imgBase64})});
@@ -1314,9 +1331,8 @@ function cleanText(text){
 	      if(d.layout_details)for(var i=0;i<d.layout_details.length;i++)if(d.layout_details[i].content)txt+=d.layout_details[i].content.replace(/<[^>]+>/g,' ')+'\n';
 	      if(d.markdown_result){var md=d.markdown_result.replace(/[#*\[\]]/g,'');txt=md.replace(/^[\-\+\*]\s+|^\d+\.\s+/gm,'').trim();}
 	      if(d.choices&&d.choices[0]&&d.choices[0].message)txt=d.choices[0].message.content||'';
-	    }else{
-	      // DeepSeek 不支持 OCR
-	      alert('OCR识别需要 GLM(智谱) 或 PaddleOCR\n请在API设置中选择');
+	    }else if(provider==='deepseek'){
+	      alert('OCR识别需要 AI Vision、GLM(智谱) 或 PaddleOCR\n请在API设置中选择');
 	      document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;
 	    }
 	    if(!txt||!txt.trim()){alert('OCR识别结果为空，请检查图片质量');document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';return;}
@@ -1327,7 +1343,7 @@ function cleanText(text){
 	  }catch(e){
 	    var msg=e.message||'';
 	    if(msg.includes('401'))alert('OCR失败: API Key无效或已过期');
-	    else if(msg.includes('Failed to fetch')||msg.includes('NetworkError'))alert('OCR失败: 无法连接PaddleOCR服务\n请检查服务是否启动，地址是否正确');
+	    else if(msg.includes('Failed to fetch')||msg.includes('NetworkError'))alert('OCR失败: 无法连接OCR服务\n请检查服务是否启动，地址是否正确');
 	    else alert('OCR失败: '+msg);
 	  }
 	  document.getElementById('btnOcr').disabled=false;document.getElementById('btnOcr').textContent='OCR 识别';
@@ -2120,7 +2136,7 @@ function nextOrder(){
   document.getElementById('resultCard').style.display='none';
   document.getElementById('diffPanel').style.display='none';
 }
-	function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(p==='paddle'){document.getElementById('paddleUrl').value=getPaddleUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}}
+	function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(p==='paddle'){document.getElementById('paddleUrl').value=getPaddleUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(p==='aivision'){document.getElementById('aivisionUrl').value=getAivisionUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}}
 	async function fetchServerTemplate(){
 	  try{
 	    var resp=await fetch('./template.xlsx');
