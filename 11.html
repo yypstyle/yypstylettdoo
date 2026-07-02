@@ -578,10 +578,23 @@ textarea::placeholder{color:var(--text-tri)}
   <div class="modal">
     <h3>⚖️ 磅单净重匹配</h3>
     <div style="font-size:12px;color:var(--text-tri);margin:8px 0">输入磅单上的车辆总净重，程序自动调整兴明发产品箱数使整车净重匹配</div>
-    <div style="display:flex;gap:8px;align-items:center;margin:10px 0">
-      <span style="white-space:nowrap">磅单净重 (kg):</span>
-      <input type="number" id="targetWeight" placeholder="例: 3185.5" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" style="flex:1;padding:10px;border:1px solid rgba(0,212,255,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px;font-family:var(--mono)">
-    </div>
+	    <div style="display:flex;gap:8px;align-items:center;margin:10px 0">
+	      <span style="white-space:nowrap">磅单净重 (kg):</span>
+	      <input type="number" id="targetWeight" placeholder="例: 3185.5" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" style="flex:1;padding:10px;border:1px solid rgba(0,212,255,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px;font-family:var(--mono)">
+	    </div>
+	    <div style="display:flex;gap:8px;align-items:center;margin:8px 0">
+	      <span style="white-space:nowrap;font-size:12px;color:var(--text-sec)">调整产品数:</span>
+	      <select id="adjCount" style="flex:1;padding:8px;border:1px solid rgba(0,212,255,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:13px">
+	        <option value="0">自动（最优方案）</option>
+	        <option value="2">2 个产品</option>
+	        <option value="3">3 个产品</option>
+	        <option value="4">4 个产品</option>
+	        <option value="5">5 个产品</option>
+	        <option value="6">6 个产品</option>
+	        <option value="7">7 个产品</option>
+	        <option value="9">9 个产品</option>
+	      </select>
+	    </div>
     <div id="weightInfo" style="font-size:12px;color:var(--text-sec);margin:8px 0"><span style="color:var(--cyan)">当前整车总净重: <b>1851.5 kg</b></span> · 其中兴明发产品 5 种</div>
     <div id="weightSuggest" style="margin:8px 0"></div>
     <div class="btn-row">
@@ -1826,10 +1839,9 @@ function bakeHTML(){
 
 // ===== 磅单净重匹配 =====
 const XMF_SUPPLIER='深圳興明發';
-let weightPlan=null; // {adjustments:[{idx,qty,name,perKg,delta}], currentNet, targetNet}
+let weightPlan=null,weightBeforeSnapshot=null;
 function matchWeight(){
   if(matchedItems.length===0){alert('没有匹配数据');return;}
-  // 计算当前总净重 + 兴明发产品
   let curNet=0,xmfItems=[];
   for(let i=0;i<matchedItems.length;i++){
     const m=matchedItems[i];
@@ -1841,10 +1853,61 @@ function matchWeight(){
   document.getElementById('targetWeight').value='';
   document.getElementById('weightSuggest').innerHTML='';
   document.getElementById('btnApplyWeight').disabled=true;
-  weightPlan=null;
+  weightPlan=null;weightBeforeSnapshot=null;
   document.getElementById('weightModal').style.display='flex';
   document.getElementById('targetWeight').focus();
 }
+
+// 通用N产品最优方案搜索
+function findBestPlan(xmf,diff,N){
+  if(xmf.length===0)return null;
+  // 取前12个作为候选
+  const sorted=xmf.map((x,i)=>({...x,origIdx:i})).sort((a,b)=>b.perKg-a.perKg);
+  const cand=sorted.slice(0,Math.min(12,sorted.length));
+  if(N<=0||N>cand.length)N=cand.length; // 自动或超出则用全部
+  let bestPlan=null,bestErr=Infinity,bestUsed=N;
+  
+  // 生成所有N组合
+  function* combos(arr,k,start,cur){
+    if(cur.length===k){yield cur.slice();return;}
+    for(let i=start;i<arr.length;i++){cur.push(i);yield* combos(arr,k,i+1,cur);cur.pop();}
+  }
+  
+  for(const combo of combos(cand,N,0,[])){
+    // 按perKg比例分配diff
+    const selected=combo.map(i=>cand[i]);
+    const totalKg=selected.reduce((s,x)=>s+x.perKg,0);
+    const plan=[];
+    let remaining=diff;
+    // 第一轮：按比例取整
+    for(const x of selected){
+      const raw=totalKg>0?(diff*x.perKg/totalKg):0;
+      let delta=Math.round(raw);
+      if(delta>15)delta=15;if(delta<-15)delta=-15;
+      if(x.qty+delta<1)delta=1-x.qty;
+      plan.push({idx:x.idx,name:x.name,perKg:x.perKg,oldQty:x.qty,delta});
+      remaining-=delta*x.perKg;
+    }
+    // 第二轮：微调剩余差额
+    for(let pass=0;pass<3&&Math.abs(remaining)>0.01;pass++){
+      for(const p of plan){
+        if(Math.abs(remaining)<0.01)break;
+        const adj=Math.round(remaining/p.perKg);
+        const newDelta=p.delta+adj;
+        if(Math.abs(newDelta)>15)continue;
+        if(p.oldQty+newDelta<1)continue;
+        p.delta=newDelta;
+        remaining-=adj*p.perKg;
+      }
+    }
+    const err=Math.abs(remaining);
+    const used=plan.filter(x=>x.delta!==0);
+    if(used.length>0&&err<bestErr){bestErr=err;bestPlan=used;bestUsed=used.length;}
+    if(bestErr<0.001)break; // 完美匹配，提前退出
+  }
+  return bestPlan?{plan:bestPlan,err:bestErr,used:bestUsed}:null;
+}
+
 function calcWeight(){
   const target=parseFloat(document.getElementById('targetWeight').value);
   if(!target||target<=0){alert('请输入有效磅单净重');return;}
@@ -1858,110 +1921,110 @@ function calcWeight(){
   for(const m of matchedItems)curNet+=m.product.netWeight*m.qty;
   const diff=target-curNet;
   
-  let bestPlan=null,bestErr=Infinity;
-
-  // 策略1: 贪心法 — 每个产品按比例分配差额，每人不超过±15箱
-  // 优点: 速度极快，结果分布均匀
-  {
-    let remaining=diff;
-    const plan=[];
-    const copy=xmf.map(x=>({...x,delta:0}));
-    // 按perKg从大到小排序（大箱先动，减少调整次数）
-    copy.sort((a,b)=>b.perKg-a.perKg);
-    let pass=0;
-    while(Math.abs(remaining)>0.01&&pass<10){
-      pass++;
-      for(const xi of copy){
-        if(Math.abs(remaining)<0.01)break;
-        const maxMove=Math.min(15,Math.abs(Math.round(remaining/xi.perKg)));
-        const move=remaining>0?Math.min(maxMove,99-xi.qty):Math.max(-maxMove,1-xi.qty);
-        if(move===0)continue;
-        xi.delta+=move;xi.qty+=move;
-        remaining-=move*xi.perKg;
-      }
+  const N=parseInt(document.getElementById('adjCount').value)||0;
+  let best=null;
+  if(N===0){
+    // 自动模式：尝试 2,3,4,5,6,7,9 和全产品，取误差最小
+    for(const n of[2,3,4,5,6,7,9,xmf.length]){
+      const r=findBestPlan(xmf,diff,n);
+      if(r&&(!best||r.err<best.err||(r.err===best.err&&r.used<best.used)))best=r;
     }
-    for(const xi of copy){
-      if(xi.delta!==0)plan.push({idx:xi.idx,name:xi.name,perKg:xi.perKg,oldQty:xmf.find(x=>x.idx===xi.idx).qty,newQty:xi.qty,delta:xi.delta});
-    }
-    const err=Math.abs(diff-plan.reduce((s,x)=>s+x.perKg*x.delta,0));
-    if(err<bestErr&&plan.length>0){bestErr=err;bestPlan=plan;}
+  }else{
+    best=findBestPlan(xmf,diff,N);
   }
-
-  // 策略2: 两产品穷举 (±12 箱，只试前8个和后8个产品)
-  // 注：已移除单产品精确凑策略，确保至少用2个兴明发产品分摊差额
-  const topN=Math.min(8,xmf.length);
-  for(let a=0;a<topN;a++){
-    for(let b=a+1;b<topN;b++){
-      for(let da=-12;da<=12;da++){
-        if(xmf[a].qty+da<1)continue;
-        const dA=da*xmf[a].perKg;
-        const db=Math.round((diff-dA)/xmf[b].perKg);
-        if(Math.abs(db)>12)continue;
-        if(xmf[b].qty+db<1)continue;
-        const err=Math.abs(dA+db*xmf[b].perKg-diff);
-        if(err<bestErr){
-          bestErr=err;bestPlan=[
-            {idx:xmf[a].idx,name:xmf[a].name,perKg:xmf[a].perKg,oldQty:xmf[a].qty,newQty:xmf[a].qty+da,delta:da},
-            {idx:xmf[b].idx,name:xmf[b].name,perKg:xmf[b].perKg,oldQty:xmf[b].qty,newQty:xmf[b].qty+db,delta:db},
-          ].filter(x=>x.delta!==0);
-        }
-      }
-    }
+  
+  // 兜底：贪心法
+  if(!best||best.plan.length===0){
+    const greedy=findBestPlan(xmf,diff,xmf.length);
+    if(greedy&&greedy.plan.length>0)best=greedy;
   }
-
-  // 策略4: 三产品精调（前6个产品中任选3个，两穷举+第三凑差额，范围±8）
-  const m6=Math.min(6,xmf.length);
-  for(let a=0;a<m6;a++){
-    for(let b=a+1;b<m6;b++){
-      for(let c=b+1;c<m6;c++){
-        for(let da=-8;da<=8;da++){
-          if(xmf[a].qty+da<1)continue;
-          const dA=da*xmf[a].perKg;
-          for(let db=-8;db<=8;db++){
-            if(xmf[b].qty+db<1)continue;
-            const dB=dA+db*xmf[b].perKg;
-            const dc=Math.round((diff-dB)/xmf[c].perKg);
-            if(Math.abs(dc)>8)continue;
-            if(xmf[c].qty+dc<1)continue;
-            const err=Math.abs(dB+dc*xmf[c].perKg-diff);
-            if(err<bestErr){
-              bestErr=err;bestPlan=[
-                {idx:xmf[a].idx,name:xmf[a].name,perKg:xmf[a].perKg,oldQty:xmf[a].qty,newQty:xmf[a].qty+da,delta:da},
-                {idx:xmf[b].idx,name:xmf[b].name,perKg:xmf[b].perKg,oldQty:xmf[b].qty,newQty:xmf[b].qty+db,delta:db},
-                {idx:xmf[c].idx,name:xmf[c].name,perKg:xmf[c].perKg,oldQty:xmf[c].qty,newQty:xmf[c].qty+dc,delta:dc},
-              ].filter(x=>x.delta!==0);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if(!bestPlan||bestPlan.length===0){document.getElementById('weightSuggest').innerHTML='<span style="color:var(--rose)">无法找到可行调整方案</span>';return;}
-  const finalNet=curNet+bestPlan.reduce((s,x)=>s+x.perKg*x.delta,0);
+  
+  if(!best||best.plan.length===0){document.getElementById('weightSuggest').innerHTML='<span style="color:var(--rose)">无法找到可行调整方案</span>';return;}
+  
+  const finalNet=curNet+best.plan.reduce((s,x)=>s+x.perKg*x.delta,0);
   let html=`<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;margin:8px 0;font-size:12px">`;
   html+=`当前总净重: <b>${curNet.toFixed(1)}</b> kg → 目标: <b>${target.toFixed(1)}</b> kg<br>`;
-  html+=`差额: <b style="color:${diff>=0?'var(--green)':'var(--rose)'}">${diff>0?'+':''}${diff.toFixed(1)}</b> kg | 调整后: <b>${finalNet.toFixed(1)}</b> kg | 误差: <b>${bestErr.toFixed(2)}</b> kg</div>`;
-  html+=`<div style="font-size:12px;color:var(--text-sec);margin:4px 0">建议调整（${bestPlan.length}个产品）:</div>`;
-  for(const x of bestPlan){
+  html+=`差额: <b style="color:${diff>=0?'var(--green)':'var(--rose)'}">${diff>0?'+':''}${diff.toFixed(1)}</b> kg | 调整后: <b>${finalNet.toFixed(1)}</b> kg | 误差: <b>${best.err.toFixed(2)}</b> kg | 使用 <b>${best.used}</b> 个产品</div>`;
+  html+=`<div style="font-size:12px;color:var(--text-sec);margin:4px 0">建议调整:</div>`;
+  for(const x of best.plan){
     html+=`<div style="padding:6px 10px;margin:3px 0;background:rgba(8,12,20,.5);border-radius:6px;font-size:12px">`+
-      `<span style="font-weight:600">${x.name}</span> · ${x.perKg}kg/箱 · ${x.oldQty}→<b style="color:${x.delta>0?'var(--green)':'var(--rose)'}">${x.newQty}</b> (${x.delta>0?'+':''}${x.delta}箱)</div>`;
+      `<span style="font-weight:600">${x.name}</span> · ${x.perKg}kg/箱 · ${x.oldQty}→<b style="color:${x.delta>0?'var(--green)':'var(--rose)'}">${x.oldQty+x.delta}</b> (${x.delta>0?'+':''}${x.delta}箱)</div>`;
   }
-  weightPlan={plan:bestPlan,currentNet:curNet,targetNet:target};
+  weightPlan={plan:best.plan,currentNet:curNet,targetNet:target};
   document.getElementById('weightSuggest').innerHTML=html;
   document.getElementById('btnApplyWeight').disabled=false;
 }
+
+// 提取微信消息各组数值快照
+function getGroupSnapshot(){
+  const groups={};
+  for(const m of matchedItems){
+    let origin=ORIGIN[m.product.supplier]||'';
+    if(!origin){
+      for(const [sup,ori] of Object.entries(ORIGIN)){
+        if(sup.includes(m.product.supplier)||m.product.supplier.includes(sup)){origin=ori;break;}
+      }
+    }
+    const brand=getBrand(m.product.name,m.product.supplier,m.product.row);
+    const key=`${origin}|${m.product.variety}|${brand||''}`;
+    if(!groups[key])groups[key]={origin,variety:m.product.variety,brand,items:[],minRow:Infinity};
+    groups[key].items.push(m);groups[key].minRow=Math.min(groups[key].minRow,m.product.row);
+  }
+  const sorted=Object.values(groups).sort((a,b)=>a.minRow-b.minRow);
+  return sorted.map(g=>{
+    const tQty=g.items.reduce((s,i)=>s+i.qty,0);
+    const tNet=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty,0);
+    const tGross=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty+i.qty/2,0);
+    const tPrice=g.items.reduce((s,i)=>s+((i.product.price||0)+1)*i.qty,0);
+    return {variety:g.variety,origin:g.origin,tQty,tNet,tGross,tPrice};
+  });
+}
+
 function applyWeight(){
   if(!weightPlan||!weightPlan.plan)return;
+  // 保存调整前快照
+  weightBeforeSnapshot=getGroupSnapshot();
   for(const x of weightPlan.plan){
-    if(x.newQty<1){alert(`错误: ${x.name} 调整后箱数<1`);return;}
-    if(matchedItems[x.idx])matchedItems[x.idx].qty=x.newQty;
+    if(x.oldQty+x.delta<1){alert(`错误: ${x.name} 调整后箱数<1`);return;}
+    if(matchedItems[x.idx])matchedItems[x.idx].qty=x.oldQty+x.delta;
   }
-  weightPlan=null;
+  // 获取调整后快照
+  const afterSnapshot=getGroupSnapshot();
   renderMatch(matchedItems,unmatchedItems,excludedItems);
   saveCarState();
+  // 显示前后对比
+  showWeightDiff(weightBeforeSnapshot,afterSnapshot);
   closeWeight();
 }
+
+function showWeightDiff(before,after){
+  let html='<div style="margin-top:12px;padding:12px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:8px">';
+  html+='<div style="font-size:13px;font-weight:600;color:var(--cyan);margin-bottom:8px">📊 调整前后微信消息对比</div>';
+  let totalBefore={tQty:0,tNet:0,tGross:0,tPrice:0};
+  let totalAfter={tQty:0,tNet:0,tGross:0,tPrice:0};
+  let changedCount=0;
+  for(let i=0;i<Math.max(before.length,after.length);i++){
+    const b=before[i]||{};
+    const a=after[i]||{};
+    totalBefore.tQty+=b.tQty||0;totalBefore.tNet+=b.tNet||0;totalBefore.tGross+=b.tGross||0;totalBefore.tPrice+=b.tPrice||0;
+    totalAfter.tQty+=a.tQty||0;totalAfter.tNet+=a.tNet||0;totalAfter.tGross+=a.tGross||0;totalAfter.tPrice+=a.tPrice||0;
+    const changed=b.tQty!==a.tQty||Math.abs(b.tNet-a.tNet)>0.01||Math.abs(b.tPrice-a.tPrice)>0.01;
+    if(changed)changedCount++;
+    html+=`<div style="padding:6px 8px;margin:4px 0;background:${changed?'rgba(245,158,11,.08)':'rgba(8,12,20,.3)'};border-radius:6px;font-size:12px">`;
+    html+=`<span style="font-weight:600;">第${i+1}组</span> ${b.variety||a.variety||''} ${changed?'<span style="color:var(--amber);font-size:10px">⚠变化</span>':'<span style="color:var(--text-tri);font-size:10px">无变化</span>'}<br>`;
+    if(changed){
+      html+=`箱数: ${b.tQty}→<b>${a.tQty}</b> (${a.tQty-b.tQty>0?'+':''}${a.tQty-b.tQty}) `;
+      html+=`净重: ${(b.tNet||0).toFixed(1)}→<b>${(a.tNet||0).toFixed(1)}</b> `;
+      html+=`金额: ${(b.tPrice||0).toFixed(2)}→<b>${(a.tPrice||0).toFixed(2)}</b>`;
+    }
+    html+='</div>';
+  }
+  html+=`<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,212,255,.15);font-size:11px;color:var(--text-sec)">`;
+  html+=`总计: 箱数 ${totalBefore.tQty}→<b>${totalAfter.tQty}</b> · 净重 ${totalBefore.tNet.toFixed(1)}→<b>${totalAfter.tNet.toFixed(1)}</b> kg · 金额 ¥${totalBefore.tPrice.toFixed(2)}→<b>¥${totalAfter.tPrice.toFixed(2)}</b>`;
+  html+=` · <span style="color:var(--amber)">${changedCount} 组发生变化</span></div></div>`;
+  showResult(html,'磅单调整对比');
+}
+
 function closeWeight(){document.getElementById('weightModal').style.display='none';}
 document.getElementById('weightModal').addEventListener('click',function(e){if(e.target===this)closeWeight();});
 document.getElementById('carNoModal').addEventListener('click',function(e){if(e.target===this)closeCarNoModal();});
