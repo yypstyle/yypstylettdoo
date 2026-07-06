@@ -239,7 +239,7 @@ textarea::placeholder{color:var(--text-tri)}
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<meta name="apple-mobile-web-app-title" content="报关生成器">
 	<link rel="apple-touch-icon" href="icon-192.png">
-	<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script></head>
+		<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" onerror="window.__xlsxFailed=true"></script></head>
 <body>
 <h1>报关初稿 v6.4</h1>
 <div class="tabs-bar" id="carTabsBar"><button class="tabs-tab" onclick="switchCarTab(0)" ondblclick="renameCarTab(0,this)"><span class="tabs-dot edit"></span>19-1<span class="tabs-del" onclick="delCarTab(0,event)">×</span></button><button class="tabs-tab active" onclick="switchCarTab(1)" ondblclick="renameCarTab(1,this)"><span class="tabs-dot edit"></span>67-1<span class="tabs-del" onclick="delCarTab(1,event)">×</span></button><button class="tabs-tab" onclick="switchCarTab(2)" ondblclick="renameCarTab(2,this)"><span class="tabs-dot edit"></span>21-1<span class="tabs-del" onclick="delCarTab(2,event)">×</span></button><button class="tabs-add" onclick="addCarTab()">+</button></div>
@@ -936,11 +936,11 @@ function saveCarState(){
   const t=tabs[currentTabIdx];if(!t)return;
   t.txt=document.getElementById('inputText').value.trim();
   t.carNo=carNo;t.carTrip=carTrip;t.cust=carNoCustomer;
-  t.m=JSON.parse(JSON.stringify(matchedItems));
-  t.u=JSON.parse(JSON.stringify(unmatchedItems));
-  t.e=JSON.parse(JSON.stringify(excludedItems));
-  t.manual=JSON.parse(JSON.stringify(manualItems));
-  t.img=imgBase64;
+	  t.m=JSON.parse(JSON.stringify(matchedItems));
+	  t.u=JSON.parse(JSON.stringify(unmatchedItems));
+	  t.e=JSON.parse(JSON.stringify(excludedItems));
+	  t.manual=JSON.parse(JSON.stringify(manualItems));
+	  // imgBase64 不存入车次状态（省 localStorage 空间）
   t.st=t.m.length>0||t.txt?'edit':'new';
   saveCarTabs();renderCarTabs();
 }
@@ -948,8 +948,8 @@ function loadCarState(){
   const t=tabs[currentTabIdx];if(!t)return;
   carNo=t.carNo||'';carTrip=t.carTrip||0;carNoCustomer=t.cust||'';
   matchedItems=t.m||[];unmatchedItems=t.u||[];excludedItems=t.e||[];
-  manualItems=t.manual||[];
-  imgBase64=t.img||'';
+	  manualItems=t.manual||[];
+	  // imgBase64 不再从车次恢复（每次拍照独立）
   document.getElementById('inputText').value=t.txt||'';
   if(carNo){
     document.getElementById('carNoBar').style.display='block';
@@ -1620,7 +1620,7 @@ function renderMatch(matched,unmatched,excluded){
     for(const e of excluded){
       const en=e.name||'';
       const eq=e.qty?e.qty+'箱':'';
-      html+='<span class="badge badge-red" style="margin:3px 4px">'+en+' '+eq+'</span>';
+	      html+='<span class="badge badge-red" style="margin:3px 4px">'+escHtml(en)+' '+escHtml(eq)+'</span>';
     }
     html+='</div>';
   }
