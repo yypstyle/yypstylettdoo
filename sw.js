@@ -1,5 +1,5 @@
 /* ===== 报关初稿生成器 v6.4 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.4-v33';
+const CACHE_NAME = 'customs-v6.4-v36';
 
 const PRECACHE_URLS = [
   './11.html',
