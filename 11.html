@@ -278,6 +278,12 @@ textarea::placeholder{color:var(--text-tri)}
     <div class="hint">端点: open.bigmodel.cn / 模型: glm-4v-flash</div>
     <div class="hint" style="margin-top:2px">OCR识别需要GLM-OCR（可混用两个Key）</div>
   </div>
+  <div class="api-row" style="margin-top:8px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px">
+    <span style="font-size:12px;color:var(--text-sec);flex:0 0 60px">常用车号</span>
+    <input type="text" id="commonCarsInput" placeholder="例: 19,21,67" style="flex:1">
+    <button class="btn btn-sm btn-primary" onclick="saveCommonCars()">保存</button>
+  </div>
+  <div class="hint">逗号分隔。识别车号时优先匹配常用车号，其他数字（街车如 52、33）也会自动识别</div>
 </div>
 <div style="position: fixed; bottom: 20px; right: 12px; z-index: 999; font-size: 13px; display: block;" id="learnCard">
   <div style="background:rgba(16,23,42,.92);border:1px solid rgba(0,212,255,.3);border-radius:24px;padding:10px 18px;cursor:pointer;display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,.4);min-height:44px" onclick="toggleLearnPanel()">
@@ -607,7 +613,8 @@ textarea::placeholder{color:var(--text-tri)}
 <div class="modal-overlay" id="carNoModal">
   <div class="modal">
     <h3>输入车号</h3>
-    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">未检测到车号，请输入（19/21/67）</div>
+    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">未检测到车号，请输入车号</div>
+    <div id="carNoQuickBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px"></div>
     <input type="text" id="carNoInput" placeholder="例: 19">
     <div class="btn-row">
       <button class="btn btn-sm btn-primary" onclick="confirmCarNo()">确认</button>
@@ -1223,17 +1230,22 @@ function showDiff(rawLines,cleanedLines){
 }
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
+function carNoRe(){
+  const cars=getCommonCars().sort((a,b)=>b.length-a.length).join('|');
+  const alt=cars?`(?:${cars})|\\d{1,4}`:'\\d{1,4}';
+  return new RegExp('(?:^|[^\\d./-])('+alt+')(?:[-\\u2010\\u2013\\u2014]([1-9])|([二三四五六七八九]))?(?=\\s|$|[^0-9]*[車车頭头首改头趟]|$)');
+}
 function cleanText(text){
   carNo='';carTrip=0;carNoCustomer='';
   const rawLines=text.split('\n');
   const first=rawLines[0].trim().replace(/^\*+/,'');
-  let carMatch=first.match(/(?:^|[^\d])(19|21|67)(?:[-\u2010\u2013\u2014]([1-9])|([二三四五六七八九]))?(?=\s|$|[^0-9]*[車车頭头首改头趟]|$)/);
+  let carMatch=first.match(carNoRe());
   let carMatchLine=first;
   if(!carMatch){
     for(const ln of rawLines){
       const tl=ln.trim();
       if(!tl||CUSTOMERS.includes(tl))continue;
-      const m=tl.match(/(?:^|[^\d])(19|21|67)(?:[-\u2010\u2013\u2014]([1-9])|([二三四五六七八九]))?(?=\s|$|[^0-9]*[車车頭头首改头趟]|$)/);
+      const m=tl.match(carNoRe());
       if(m){carMatch=m;carMatchLine=tl;break;}
     }
   }
@@ -1274,7 +1286,7 @@ function cleanText(text){
 	    if(!s)return '';
 	    if(/^[-=*]{2,}$/.test(s)||/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(s)||/^[a-z]+[/]/.test(s))return '';
 	    if(/^[\u4e00-\u9fff]+[:：]$/.test(s))return '';
-	    const carSuffix=s.replace(/\s*(19|21|67).*$/,'').trim();
+	    const carSuffix=s.replace(/\s*\d{1,4}.*$/,'').trim();
 	    if(CUSTOMERS.includes(s)||CUSTOMERS.includes(carSuffix))return '';
 	    s=s.replace(/\*(\d+)-(\d+)/g,' X$1').replace(/\*(\d+)-(\d+)/g,' X$1').replace(/\*(\d+\.?\d*)\*/g,' $1 ').replace(/\*(\d+\.?\d*)/g,function(m,num,off,src){return(off>0&&/\d/.test(src[off-1]))?m:(' X'+num);}).replace(/[^a-zA-Z0-9\u4e00-\u9fff\s\-*×\"\/.()（）\[\]【】「」]/g,' ');
 	    s=s.replace(/^\*+|\*+$/g,'').trim();
@@ -1419,7 +1431,7 @@ function processMatch(lines){
     // 樣板/样板行跳过不匹配
     if(/[樣样]板/.test(ln))continue;
     const parsed=parseLine(ln);if(!parsed){if(ln){
-      const raw=ln.replace(/\s*(19|21|67).*$/,'').trim();
+      const raw=ln.replace(/\s*\d{1,4}.*$/,'').trim();
       if(!CUSTOMERS.includes(raw)&&!CUSTOMERS.includes(ln))unmatched.push({text:ln});
     }continue;}
     if(CUSTOMERS.includes(parsed.name))continue;
@@ -2063,6 +2075,7 @@ function genWechat(){
   if(!car){
     document.getElementById('carNoModal').style.display='flex';
     document.getElementById('carNoInput').value='';
+    renderCarNoQuickBtns();
     document.getElementById('carNoInput').focus();
     window._genWechatPending={sorted};
     return;
@@ -2072,6 +2085,12 @@ function genWechat(){
 function confirmCarNo(){
   const car=document.getElementById('carNoInput').value.trim();
   if(!car)return;
+  // 写回全局：微信消息与导出文件名使用同一车号
+  carNo=car;carTrip=1;
+  document.getElementById('carNoBar').style.display='block';
+  document.getElementById('carNoText').textContent=carNo+'-'+carTrip;
+  document.getElementById('carNoCustomer').textContent=carNoCustomer||'';
+  saveCarState();
   closeCarNoModal();
   if(window._genWechatPending)_doGenWechat(car,window._genWechatPending.sorted);
 }
@@ -2211,7 +2230,15 @@ function nextOrder(){
   document.getElementById('resultCard').style.display='none';
   document.getElementById('diffPanel').style.display='none';
 }
-	function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(p==='paddle'){document.getElementById('paddleUrl').value=getPaddleUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(p==='aivision'){document.getElementById('aivisionUrl').value=getAivisionUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}}
+	function getCommonCars(){const raw=localStorage.getItem('commonCars')||'19,21,67';return raw.split(/[,，\s]+/).map(s=>s.trim()).filter(s=>/^\d{1,4}$/.test(s));}
+	function saveCommonCars(){const v=document.getElementById('commonCarsInput').value.trim();localStorage.setItem('commonCars',v);document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}
+	function renderCarNoQuickBtns(){
+	  const box=document.getElementById('carNoQuickBtns');if(!box)return;
+	  box.innerHTML=getCommonCars().map(c=>`<button class="btn btn-sm" style="padding:4px 10px;font-size:12px" onclick="selectCommonCar('${c}')">${c}</button>`).join('');
+	}
+	function selectCommonCar(c){document.getElementById('carNoInput').value=c;confirmCarNo();}
+	function loadApi(){const k=getApiKey();const p=getApiProvider();document.getElementById('apiProvider').value=p;toggleApiFields();if(p==='paddle'){document.getElementById('paddleUrl').value=getPaddleUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(p==='aivision'){document.getElementById('aivisionUrl').value=getAivisionUrl();document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}else if(k){document.getElementById('apiKey').value=k;document.getElementById('apiDot').textContent='已设置';document.getElementById('apiDot').style.color='var(--pastel-green-text)';}
+	const cc=document.getElementById('commonCarsInput');if(cc)cc.value=localStorage.getItem('commonCars')||'19,21,67';}
 	async function fetchServerTemplate(){
 	  try{
 	    var resp=await fetch('./template.xlsx');
