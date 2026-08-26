@@ -1,8 +1,9 @@
 /* ===== 报关初稿生成器 v6.4 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.4-v39';
+const CACHE_NAME = 'customs-v6.4-v40';
 
 const PRECACHE_URLS = [
   './11.html',
+  './template.xlsx',
   './manifest.json',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
