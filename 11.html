@@ -662,7 +662,7 @@ const ALIAS = {
   'F1000美透':'1000美透','容750':'容海500','容1000':'興明發500底',
   '中更':'甘蔗中更','饭更':'甘蔗中更','紙更':'甘蔗中更','甘蔗中更':'甘蔗中更','甘蔗饭更':'甘蔗中更','甘蔗飯更':'甘蔗中更','160木更':'甘蔗中更',
   'HS1350黑碗':'Y1350碗','HS1200黑碗':'Y1200碗','HS1200透碗':'Y1200碗','HSY1200透碗':'Y1200碗','Y1200黑碗':'Y1200碗','HS700黑碗':'Y1200碗','HSY1100黑碗':'Y1200碗',
-  'x11':'H500','银桥X11':'X11','銀橋X11':'X11','银桥X-11':'X11',
+  'x11':'X11','X11':'X11','银桥X11':'X11','銀橋X11':'X11','银桥X-11':'X11',
   'HS450透碗':'HS500圓盒','HS750美透':'HS1000方盒','白24PP碗':'H24白碗','24PP白碗':'H24白碗',
   '30PP碗':'H30碗','30PP':'H30碗',
   '12-16PP碗盖':'H12-16碗蓋','12-16PP碗蓋':'H12-16碗蓋','12-16PP盖':'H12-16碗蓋',
@@ -1233,7 +1233,8 @@ function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 function carNoRe(){
   const cars=getCommonCars().sort((a,b)=>b.length-a.length).join('|');
   const alt=cars?`(?:${cars})|\\d{1,4}`:'\\d{1,4}';
-  return new RegExp('(?:^|[^\\d./-])('+alt+')(?:[-\\u2010\\u2013\\u2014]([1-9])|([二三四五六七八九]))?(?=\\s|$|[^0-9]*[車车頭头首改头趟]|$)');
+  // 允许行首直接出现数字车号（去掉前置非数字要求，避免纯数字开头的行无法识别）
+  return new RegExp('(?:^|[^\\d./-])('+alt+')(?:[-\\u2010\\u2013\\u2014]([1-9])|([二三四五六七八九]))?(?=\\s|$|[^0-9]*[車车頭头首改头趟]|$|(?=[-\\u2010\\u2013\\u2014]\\d))');
 }
 function cleanText(text){
   carNo='';carTrip=0;carNoCustomer='';
@@ -1508,8 +1509,10 @@ function matchProduct(inputName,rawLine){
       p=templateProducts.find(p=>clean(p.name)===clean(ALIAS[c]));
     }if(p)return p;
   }
-  // 2. 精确匹配（模板产品名完全相同）
+  // 2. 精确匹配（模板产品名完全相同；大小写不敏感——装车单小写 x11 应命中模板 X11）
   p=templateProducts.find(p=>p.name===c);if(p)return p;
+  const lc=c.toLowerCase();
+  p=templateProducts.find(p=>p.name.toLowerCase()===lc);if(p)return p;
   if(cNorm!==c&&ALIAS[cNorm]&&!deletedBuiltins.has(cNorm)){p=templateProducts.find(p=>p.name===ALIAS[cNorm]);if(p)return p;}
   const words=c.split(/\s+/);
   for(const w of words){if(ALIAS[w]&&!deletedBuiltins.has(w)){p=templateProducts.find(p=>p.name===ALIAS[w]);if(p)return p;}}
@@ -1518,13 +1521,13 @@ function matchProduct(inputName,rawLine){
   for(const sf of['白色','黑色','白','黑']){if(c.endsWith(sf)){const ba=c.slice(0,-sf.length);if(ALIAS[ba]&&!deletedBuiltins.has(ba)){const t=ALIAS[ba];if(sf==='白'||sf==='白色'){p=templateProducts.find(p=>p.name===t.replace(/碗$/,'白碗'));if(p)return p}else{p=templateProducts.find(p=>p.name===t.replace(/碗$/,'黑碗'));if(p)return p}}}}
   const isLid=/[盖蓋]/.test(c)&&!/碗/.test(c);
   const pool=isLid?templateProducts.filter(p=>/[盖蓋]/.test(p.name)||p.name.includes('盒蓋')):templateProducts;
-  if(c.length>=3){p=pool.find(p=>p.name.includes(c));if(p)return p;}
-  p=pool.find(p=>c.includes(p.name));if(p)return p;
-  const c2=c.replace(/[\s\-_—–]/g,'');p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'')===c2);if(p)return p;
+  if(c.length>=3){p=pool.find(p=>p.name.toLowerCase().includes(lc));if(p)return p;}
+  p=pool.find(p=>lc.includes(p.name.toLowerCase()));if(p)return p;
+  const c2=c.replace(/[\s\-_—–]/g,'').toLowerCase();p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'').toLowerCase()===c2);if(p)return p;
   if(ALIAS[c]&&!deletedBuiltins.has(c)){const ac=ALIAS[c].replace(/[\s\-_—–]/g,'');p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'')===ac);if(p)return p;}
-  const c3=c.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'');
-  p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'');return tp===c3;});if(p)return p;
-  if(c3.length>=3){p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'');return tp.includes(c3);});if(p)return p;}
+  const c3=c.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();
+  p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();return tp===c3;});if(p)return p;
+  if(c3.length>=3){p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();return tp.includes(c3);});if(p)return p;}
   return null;
 }
 function isExcluded(n){if(!n)return false;if(n==='甘蔗中更'||n==='中更')return false;if(n.includes('樽'))return true;for(const e of EXCLUDE)if(n===e||n.includes(e))return true;for(const e of learnedExcludes)if(n===e||n.includes(e))return true;return false;}
@@ -2291,6 +2294,11 @@ if('serviceWorker' in navigator){
 	navigator.serviceWorker.register('sw.js').catch(function(){});
 }
 	</script>
+<script>
+// 掉后台/关闭前强制保存当前车次状态（防 MIUI 等省电策略杀后台丢数据）
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'){try{saveCarState()}catch(e){}}});
+window.addEventListener('pagehide',function(){try{saveCarState()}catch(e){}});
+</script>
 <script>
 /* ===== PWA 文件接收：分享 + Launch Queue ===== */
 // 通过文件管理器“分享”到本 App 时接收文件
