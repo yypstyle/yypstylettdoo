@@ -1039,6 +1039,21 @@ function parseTemplateProducts(ws){
   }
   return products;
 }
+// 模板更新后，把已存车次数据里的产品按 名称+供应商 重映射到新模板（刷新行号/净重/价格），防止模板插行后导出错行
+function remapTabRows(){
+  if(!templateProducts.length)return;
+  let changed=false;
+  for(const t of tabs){
+    for(const it of (t.m||[])){
+      if(!it.product)continue;
+      const p=templateProducts.find(q=>q.name===it.product.name&&q.supplier===it.product.supplier);
+      if(p&&(p.row!==it.product.row||p.netWeight!==it.product.netWeight||p.price!==it.product.price)){
+        it.product.row=p.row;it.product.netWeight=p.netWeight;it.product.price=p.price;it.product.pack=p.pack;it.product.variety=p.variety;it.product.supplier=p.supplier;changed=true;
+      }
+    }
+  }
+  if(changed)saveCarTabs();
+}
 // 加载模板
 	// ===== PWA 文件选择（File System Access API + fallback）=====
 	async function pickTemplateFile(){
@@ -1073,6 +1088,7 @@ function parseTemplateProducts(ws){
       templateWB=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellStyles:true,cellFormula:true});
       const ws=templateWB.Sheets['工作表2'];if(!ws)throw new Error('找不到工作表2');
       templateProducts=parseTemplateProducts(ws);
+      remapTabRows();
       templateFileName=f.name;buildProdAlts();prodListDirty=true;prodAltsDirty=true;
       if(templateProducts.length===0){document.getElementById('templateStatus').innerHTML='<span class="badge badge-red">模板中未找到有效产品</span>';}
       else if(templateProducts.length>300){document.getElementById('templateStatus').innerHTML=`<span class="badge badge-yellow">${f.name} / ${templateProducts.length}个产品（产品数较多）</span>`;}
@@ -2251,6 +2267,7 @@ function nextOrder(){
 	    templateWB=XLSX.read(bytes,{type:'array',cellStyles:true,cellFormula:true});
 	    var ws=templateWB.Sheets['工作表2'];if(!ws)return;
 	    templateProducts=parseTemplateProducts(ws);
+	    remapTabRows();
 	    templateFileName='template.xlsx（服务器）';
 	    buildProdAlts();prodListDirty=true;prodAltsDirty=true;
 	    document.getElementById('templateStatus').innerHTML='<span class="badge badge-green">已加载: 服务器模板 / '+templateProducts.length+'个产品</span>';
@@ -2282,6 +2299,7 @@ function nextOrder(){
     templateWB=XLSX.read(bytes,{type:'array',cellStyles:true,cellFormula:true});
     const ws=templateWB.Sheets['工作表2'];if(!ws)return;
     templateProducts=parseTemplateProducts(ws);
+    remapTabRows();
     templateFileName=name;buildProdAlts();prodListDirty=true;prodAltsDirty=true;
     document.getElementById('templateStatus').innerHTML=`<span class="badge badge-green">已加载: ${name} / ${templateProducts.length}个产品</span>`;
     if(ws['!cols']&&!templateWB._colWidths)templateWB._colWidths=JSON.parse(JSON.stringify(ws['!cols']));
