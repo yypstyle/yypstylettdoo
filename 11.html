@@ -895,7 +895,9 @@ const ORIGIN = {
 };
 function getBrand(n,supplier,row){
   if(!n)return null;
-  if(row!==undefined && row>=4 && row<=71){
+  // 中央化學全表有品牌（不限行号，模板加行不踩线）
+  if(supplier&&(supplier.includes('中央化學')||supplier.includes('中央化学')))return '中央';
+  if(row!==undefined && row>=4 && row<=78){
     if(supplier){
       if(supplier.includes('韓盛')||supplier.includes('韩盛'))return '韓盛';
       if(supplier.includes('中央化學')||supplier.includes('中央化学'))return '中央';
