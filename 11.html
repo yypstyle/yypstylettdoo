@@ -882,7 +882,7 @@ function cntStr(n){return COUNT_MAP[n]||'多種';}
 const EXCLUDE = ['X-04','X-11','X-18','X-23','X-28','X-66','X23A','X25','X66','X56',
   'CH11','CH18','CH19','CH23','CH28','CH55A','HK11','HK21','HK23','HK28','HK66',
   'L-03','L23','L50','L28X','L55','L-50','G12A','G50','M1','M-1','N750',
-  '330樽','600樽','750樽','KS102X','C-55','C55','C-12A','银桥1200透明','必事利','3012碟','中一深帶扣','中一深带扣','新中一深S1','特一深',
+  '330樽','KS102X','C-55','C55','C-12A','银桥1200透明','必事利','3012碟','中一深帶扣','中一深带扣','新中一深S1','特一深',
   '1000甘蔗盒','1000甘蔗盒盖','F25','LBK999白','LBK700','LBK142','LBK','白LBK'];
 const ORIGIN = {
   '汕頭韓盛':'汕頭','深圳興明發':'深圳','東莞茂盈':'東莞','東莞中央化學':'東莞',
@@ -891,6 +891,8 @@ const ORIGIN = {
   '江苏金晟环保餐具有限公司':'江苏宿遷','青橄榄环保科技（东莞）有限公司':'東莞',
   '旺盟(上海)新材料科技有限公司':'上海','浙江福昌环保科技有限公司':'浙江省兰溪市',
   '溫洲捷弗瑞材料有限公司':'溫洲','溧洲捷弗瑞材料有限公司':'溧洲',
+  '珠海市友科塑料制品有限公司':'珠海',
+  '辰润':'深圳',
   '江苏徐洲青青紙制品':'江苏徐州','河北稻香环保科技有限公司':'河北邢台',
 };
 function getBrand(n,supplier,row){
@@ -1037,7 +1039,10 @@ function parseTemplateProducts(ws){
     const pk=Number((ws[XLSX.utils.encode_cell({c:4,r:r-1})]||{}).v||0);
     const nw=Number((ws[XLSX.utils.encode_cell({c:5,r:r-1})]||{}).v||0);if(nw<=0)continue;
     const pr=Number((ws[XLSX.utils.encode_cell({c:8,r:r-1})]||{}).v||0);
-    products.push({name:n,supplier:sup,variety:var_,pack:pk,netWeight:nw,price:pr,row:r});
+    // L列固定每箱毛重（V8: 公式形如 =J70*12.95）；无则按 净重+0.5/箱 估算
+    const gc=ws[XLSX.utils.encode_cell({c:11,r:r-1})];
+    const gm=gc&&gc.f?/^J\d+\*([\d.]+)$/.exec(gc.f):null;
+    products.push({name:n,supplier:sup,variety:var_,pack:pk,netWeight:nw,price:pr,grossPer:gm?parseFloat(gm[1]):0,row:r});
   }
   return products;
 }
@@ -1049,8 +1054,8 @@ function remapTabRows(){
     for(const it of (t.m||[])){
       if(!it.product)continue;
       const p=templateProducts.find(q=>q.name===it.product.name&&q.supplier===it.product.supplier);
-      if(p&&(p.row!==it.product.row||p.netWeight!==it.product.netWeight||p.price!==it.product.price)){
-        it.product.row=p.row;it.product.netWeight=p.netWeight;it.product.price=p.price;it.product.pack=p.pack;it.product.variety=p.variety;it.product.supplier=p.supplier;changed=true;
+      if(p&&(p.row!==it.product.row||p.netWeight!==it.product.netWeight||p.price!==it.product.price||p.grossPer!==it.product.grossPer)){
+        it.product.row=p.row;it.product.netWeight=p.netWeight;it.product.price=p.price;it.product.pack=p.pack;it.product.variety=p.variety;it.product.supplier=p.supplier;it.product.grossPer=p.grossPer;changed=true;
       }
     }
   }
@@ -1247,6 +1252,8 @@ function showDiff(rawLines,cleanedLines){
   }
 }
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+// 毛重：模板L列有固定每箱毛重(grossPer)用之，否则按 净重+0.5/箱 估算
+function grossOf(p,qty){if(p&&p.grossPer)return p.grossPer*qty;return (p?p.netWeight||0:0)*qty+qty/2;}
 
 function carNoRe(){
   const cars=getCommonCars().sort((a,b)=>b.length-a.length).join('|');
@@ -1548,11 +1555,10 @@ function matchProduct(inputName,rawLine){
   if(c3.length>=3){p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();return tp.includes(c3);});if(p)return p;}
   return null;
 }
-function isExcluded(n){if(!n)return false;if(n==='甘蔗中更'||n==='中更')return false;if(n.includes('樽'))return true;for(const e of EXCLUDE)if(n===e||n.includes(e))return true;for(const e of learnedExcludes)if(n===e||n.includes(e))return true;return false;}
+function isExcluded(n){if(!n)return false;if(n==='甘蔗中更'||n==='中更')return false;for(const e of EXCLUDE)if(n===e||n.includes(e))return true;for(const e of learnedExcludes)if(n===e||n.includes(e))return true;return false;}
 function isNotCustomsName(n){
   if(!n)return false;
   if(n==='HK')return true; // 独立HK（如"HK 11"空格分割后变成裸HK）
-  if(n.includes('樽'))return true;
   if(n.includes('不报'))return true; // 模板标记"（不报）"的产品不报关
   if(n.includes('L999'))return true;
   if(/^X[-]?\d/i.test(n)||/^CH[-]?\d/i.test(n)||/^HK[-]?\d/i.test(n)||/^L[-]?\d/i.test(n)||/^G[-]?\d/i.test(n)||/^C[-]?\d/i.test(n)||/^M[-]?\d/i.test(n)||/^N[-]?\d/i.test(n))return true;
@@ -1728,6 +1734,11 @@ function loadLearnedAliases(){
   try{const s=localStorage.getItem('v63learned');if(s){const d=JSON.parse(s);for(const [k,v] of Object.entries(d)){if(!deletedBuiltins.has(k))learnedAliases[k]=v;}}}catch(e){}
   learnedExcludes=[...BUILTIN_EXCLUDES];
   try{const s=localStorage.getItem('v63exclude');if(s){const d=JSON.parse(s);for(const x of d)if(!learnedExcludes.includes(x))learnedExcludes.push(x);}}catch(e){}
+  // V8: 300/600/750樽已是辰润正式报关产品，清除历史学习排除记录
+  for(const z of ['300樽','600樽','750樽']){
+    const i=learnedExcludes.indexOf(z);
+    if(i>=0){learnedExcludes.splice(i,1);try{const s2=localStorage.getItem('v63exclude');const d2=s2?JSON.parse(s2):[];const j=d2.indexOf(z);if(j>=0){d2.splice(j,1);localStorage.setItem('v63exclude',JSON.stringify(d2));}}catch(e){}}
+  }
   refreshLearnUI();
 }
 let pendingLearnName='';
@@ -2019,7 +2030,7 @@ function getGroupSnapshot(){
   return sorted.map(g=>{
     const tQty=g.items.reduce((s,i)=>s+i.qty,0);
     const tNet=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty,0);
-    const tGross=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty+i.qty/2,0);
+    const tGross=g.items.reduce((s,i)=>s+grossOf(i.product,i.qty),0);
     const tPrice=g.items.reduce((s,i)=>s+((i.product.price||0)+1)*i.qty,0);
     return {variety:g.variety,origin:g.origin,tQty,tNet,tGross,tPrice};
   });
@@ -2123,7 +2134,7 @@ function _doGenWechat(car,sorted){
     if(brandTxt==='美星')brandTxt='没有';
     const tQty=g.items.reduce((s,i)=>s+i.qty,0);
     const tNet=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty,0);
-    const tGross=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty+i.qty/2,0);
+    const tGross=g.items.reduce((s,i)=>s+grossOf(i.product,i.qty),0);
     const tPrice=g.items.reduce((s,i)=>s+((i.product.price||0)+1)*i.qty,0); // 价格+1: 报关申报价格 = 模板单价 + 1元/箱
     const uniqueRows=new Set(g.items.map(i=>i.product.row));
     const itemCnt=uniqueRows.size;
