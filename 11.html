@@ -659,7 +659,7 @@ const ALIAS = {
   'PP热盖':'H12-16碗蓋','PP蓋':'H12-16碗蓋','PP热蓋':'H12-16碗蓋','PP熱蓋':'H12-16碗蓋','pp熱蓋':'H12-16碗蓋','Pp熱蓋':'H12-16碗蓋','80PP盖':'H12-16碗蓋','80PP熱蓋':'H12-16碗蓋','80PP凍蓋':'H12-16碗蓋','80PP冻盖':'H12-16碗蓋',
   '24透':'H24碗','12透':'H12碗','16透':'H16碗','20透':'H20碗','30透':'H30碗',
   '1-2安甘蔗盖':'1-2安甘蔗杯','6828盖':'盒蓋','盒盖':'盒蓋','合蓋':'盒蓋','合盖':'盒蓋',
-  'F1000美透':'1000美透','容750':'容海500','容1000':'興明發500底',
+  'F1000美透':'1000美透','容750':'容海500','容1000':'容海500',
   '中更':'甘蔗中更','饭更':'甘蔗中更','紙更':'甘蔗中更','甘蔗中更':'甘蔗中更','甘蔗饭更':'甘蔗中更','甘蔗飯更':'甘蔗中更','160木更':'甘蔗中更',
   'HS1350黑碗':'Y1350碗','HS1200黑碗':'Y1200碗','HS1200透碗':'Y1200碗','HSY1200透碗':'Y1200碗','Y1200黑碗':'Y1200碗','HS700黑碗':'Y1200碗','HSY1100黑碗':'Y1200碗',
   'x11':'X11','X11':'X11','银桥X11':'X11','銀橋X11':'X11','银桥X-11':'X11',
@@ -1731,6 +1731,11 @@ function loadLearnedAliases(){
     localStorage.setItem('v63hash',BUILTIN_HASH);
   }
   try{const s=localStorage.getItem('v63deleted');if(s){deletedBuiltins=new Set(JSON.parse(s));}}catch(e){deletedBuiltins=new Set();}
+  // 业务关键重定向（WDK系列/快快樂/T系列 → 代替报关产品）不允许被本地删除记录禁用
+  const PROTECTED_ALIAS=['WDK500','WDK650','WDK750','WDK1000','WDK500底','WDK650底','WDK750底','WDK1000底','快快樂1000美式','快快樂1200美式','快快樂1000碗','T34','T36','T38','T316'];
+  for(const z of PROTECTED_ALIAS){
+    if(deletedBuiltins.delete(z))try{const s2=localStorage.getItem('v63deleted');const d2=s2?JSON.parse(s2):[];const j=d2.indexOf(z);if(j>=0){d2.splice(j,1);localStorage.setItem('v63deleted',JSON.stringify(d2));}}catch(e){}
+  }
   for(const [k,v] of Object.entries(BUILTIN_LEARNED)){
     if(!deletedBuiltins.has(k))learnedAliases[k]=v;
   }
@@ -2292,7 +2297,7 @@ function nextOrder(){
 		}
 		async function fetchServerAliases(){
 		  try{
-		    var resp=await fetch('./aliases.json');
+		    var resp=await fetch('./aliases.json',{cache:'no-store'});
 		    if(!resp.ok)return;
 		    var d=await resp.json();
 		    if(d.aliases){Object.assign(learnedAliases,d.aliases);}
