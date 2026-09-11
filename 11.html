@@ -583,7 +583,7 @@ textarea::placeholder{color:var(--text-tri)}
 <div class="modal-overlay" id="weightModal" style="display: none;">
   <div class="modal">
     <h3>⚖️ 磅单净重匹配</h3>
-    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">输入磅单上的车辆总净重，程序自动调整兴明发产品箱数使整车净重匹配</div>
+    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">输入磅单上的车辆总净重，程序在现有箱数基础上逐箱微调兴明发产品（小幅分摊，不会大幅改动单一产品）</div>
 	    <div style="display:flex;gap:8px;align-items:center;margin:10px 0">
 	      <span style="white-space:nowrap">磅单净重 (kg):</span>
 	      <input type="number" id="targetWeight" placeholder="例: 3185.5" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" style="flex:1;padding:10px;border:1px solid rgba(0,212,255,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px;font-family:var(--mono)">
@@ -1913,55 +1913,46 @@ function matchWeight(){
   document.getElementById('targetWeight').focus();
 }
 
-// 通用N产品最优方案搜索
+// 通用磅单匹配：均匀分摊+微调——差额由各产品均匀承担（在现有箱数上同向小幅增减），
+// 再逐箱微调逼近磅单值。不会把差额全压在单一产品上造成箱数暴涨暴跌。
 function findBestPlan(xmf,diff,N){
-  if(xmf.length===0)return null;
-  // 取前12个作为候选
+  if(xmf.length===0||diff===0)return null;
+  // N>0: 只用每箱净重最大的前N个产品参与调整；N=0 自动用全部
   const sorted=xmf.map((x,i)=>({...x,origIdx:i})).sort((a,b)=>b.perKg-a.perKg);
-  const cand=sorted.slice(0,Math.min(12,sorted.length));
-  if(N<=0||N>cand.length)N=cand.length; // 自动或超出则用全部
-  let bestPlan=null,bestErr=Infinity,bestUsed=N;
-  
-  // 生成所有N组合
-  function* combos(arr,k,start,cur){
-    if(cur.length===k){yield cur.slice();return;}
-    for(let i=start;i<arr.length;i++){cur.push(i);yield* combos(arr,k,i+1,cur);cur.pop();}
-  }
-  
-  for(const combo of combos(cand,N,0,[])){
-    // 按perKg比例分配diff
-    const selected=combo.map(i=>cand[i]);
-    const totalKg=selected.reduce((s,x)=>s+x.perKg,0);
-    const plan=[];
-    let remaining=diff;
-    // 第一轮：按比例取整
-    for(const x of selected){
-      const raw=totalKg>0?(diff*x.perKg/totalKg):0;
-      let delta=Math.round(raw);
-      // 不设硬上限，只约束箱数>=0
-      if(delta>99)delta=99;
-      if(x.qty+delta<1)delta=1-x.qty;
-      plan.push({idx:x.idx,name:x.name,perKg:x.perKg,oldQty:x.qty,delta});
-      remaining-=delta*x.perKg;
+  const cand=N>0?sorted.slice(0,Math.min(N,sorted.length)):sorted;
+  const plan=cand.map(x=>({idx:x.idx,name:x.name,perKg:x.perKg,oldQty:x.qty,delta:0}));
+  // 1. 按各产品当前库存重量占比分摊差额——货多的多承担、货少的少承担，
+  //    避免 10 箱的小项被平摊大额而直接砍到 1 箱
+  let rem=diff;
+  {
+    const sumW=plan.reduce((s,p)=>s+p.perKg*p.oldQty,0)||1;
+    for(const p of plan){
+      let d=Math.round(diff*(p.perKg*p.oldQty)/sumW/p.perKg); // = round(diff*oldQty/sumW)
+      if(p.oldQty+d<1)d=1-p.oldQty; // 箱数最少保留1
+      if(Math.abs(d)>350)d=d>0?350:-350;
+      p.delta=d;rem-=d*p.perKg;
     }
-    // 第二轮：微调剩余差额
-    for(let pass=0;pass<5&&Math.abs(remaining)>0.01;pass++){
-      for(const p of plan){
-        if(Math.abs(remaining)<0.01)break;
-        const adj=Math.round(remaining/p.perKg);
-        const newDelta=p.delta+adj;
-        if(Math.abs(newDelta)>99)continue;
-        if(p.oldQty+newDelta<1)continue;
-        p.delta=newDelta;
-        remaining-=adj*p.perKg;
+  }
+  // 2. 逐箱微调：每步±1选最接近的，直到无法更接近
+  for(let iter=0;iter<3000&&Math.abs(rem)>0.005;iter++){
+    let bi=-1,bd=0,best=Math.abs(rem);
+    for(let i=0;i<plan.length;i++){
+      const p=plan[i];
+      if(p.delta+1<=350){
+        const nr=rem-p.perKg;
+        if(Math.abs(nr)<best-1e-9){best=Math.abs(nr);bi=i;bd=1;}
+      }
+      if(p.delta-1>=-350&&p.oldQty+p.delta-1>=1){
+        const nr=rem+p.perKg;
+        if(Math.abs(nr)<best-1e-9){best=Math.abs(nr);bi=i;bd=-1;}
       }
     }
-    const err=Math.abs(remaining);
-    const used=plan.filter(x=>x.delta!==0);
-    if(used.length>0&&err<bestErr){bestErr=err;bestPlan=used;bestUsed=used.length;}
-    if(bestErr<0.001)break; // 完美匹配，提前退出
+    if(bi<0)break;
+    plan[bi].delta+=bd;rem-=bd*plan[bi].perKg;
   }
-  return bestPlan?{plan:bestPlan,err:bestErr,used:bestUsed}:null;
+  const used=plan.filter(p=>p.delta!==0);
+  if(used.length===0)return null;
+  return {plan:used,err:Math.abs(rem),used:used.length};
 }
 
 function calcWeight(){
