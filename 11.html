@@ -678,7 +678,7 @@ const ALIAS = {
   '30碗白':'H30白碗','24碗白':'H24白碗','24-30安盖':'H24-30碗蓋','24-30安蓋':'H24-30碗蓋',
   'EP55':'EP55','EP33':'EP33','EP28S':'EP28S','EP88':'EP88',
   'H-1250碗':'H1250碗','H-1250碗透':'H1250碗','H-1250碗盖':'H1250碗蓋','H-1500碗':'H1250碗','H-1500碗透':'H1250碗','6828(无黑字)':'6828','6828透':'6828','6828黑色':'6828黑','6828黑':'6828黑',
-  '美星50碗':'美星450碗','美星450碗':'H16碗','快1000透碗':'興年華1000碗','1000透碗底':'1000美透','兴1000碗透':'1000美透','興1000碗透':'1000美透',
+  '美星50碗':'美星450碗','快1000透碗':'興年華1000碗','1000透碗底':'1000美透','兴1000碗透':'1000美透','興1000碗透':'1000美透',
   '30-35纸碗盖':'H24-30碗蓋',
   '三散':'6*197 三層紙飲管','6*197三散':'6*197 三層紙飲管',
   'la2白色':'LS一2A','LA2':'LS一2A','LA2白':'LS一2A','LS11白色':'DG-11白',
@@ -1037,8 +1037,10 @@ function parseTemplateProducts(ws){
     const sup=String((ws[XLSX.utils.encode_cell({c:2,r:r-1})]||{}).v||'');
     const var_=String((ws[XLSX.utils.encode_cell({c:3,r:r-1})]||{}).v||'');
     const pk=Number((ws[XLSX.utils.encode_cell({c:4,r:r-1})]||{}).v||0);
-    const nw=Number((ws[XLSX.utils.encode_cell({c:5,r:r-1})]||{}).v||0);if(nw<=0)continue;
+    const nw=Number((ws[XLSX.utils.encode_cell({c:5,r:r-1})]||{}).v||0);
     const pr=Number((ws[XLSX.utils.encode_cell({c:8,r:r-1})]||{}).v||0);
+    // 净重和价格都空=停用/预留行跳过；净重缺失但价格有的（如美星450碗）仍纳入匹配，净重按0待补
+    if(nw<=0&&pr<=0)continue;
     // L列固定每箱毛重（V8: 公式形如 =J70*12.95）；无则按 净重+0.5/箱 估算
     const gc=ws[XLSX.utils.encode_cell({c:11,r:r-1})];
     const gm=gc&&gc.f?/^J\d+\*([\d.]+)$/.exec(gc.f):null;
@@ -1528,8 +1530,10 @@ function matchProduct(inputName,rawLine){
   const cCompact=c.replace(/\s+/g,'');
   if(cCompact!==c&&learnedAliases[cCompact]){p=templateProducts.find(p=>p.name===learnedAliases[cCompact]);if(p)return p;}
   if(cNorm!==c&&learnedAliases[cNorm]){p=templateProducts.find(p=>p.name===learnedAliases[cNorm]);if(p)return p;}
-  // 0b. 学习别名逐词匹配（如"甘蔗中更 10箱"→词"甘蔗中更"命中）
-  for(const w of c.split(/\s+/)){if(learnedAliases[w]){p=templateProducts.find(p=>p.name===learnedAliases[w]);if(p)return p;}}
+  // 0b. 学习别名逐词匹配（如"甘蔗中更 10箱"→词"甘蔗中更"命中）；
+  //     输入去空格后本身就是模板产品名（如"12*197 三層紙飲管"）则跳过逐词，避免被"12*197"这类裸简称劫持
+  const cSelf=templateProducts.find(p=>p.name.replace(/\s+/g,'')===cCompact);
+  if(!cSelf){for(const w of c.split(/\s+/)){if(learnedAliases[w]){p=templateProducts.find(p=>p.name===learnedAliases[w]);if(p)return p;}}}
   // 1. ALIAS硬编码映射（优先于精确匹配，解决WDK等模板自有产品的重映射）
   if(ALIAS[c]&&!deletedBuiltins.has(c)){
     p=templateProducts.find(p=>p.name===ALIAS[c]);if(!p){
@@ -1543,19 +1547,22 @@ function matchProduct(inputName,rawLine){
   p=templateProducts.find(p=>p.name.toLowerCase()===lc);if(p)return p;
   if(cNorm!==c&&ALIAS[cNorm]&&!deletedBuiltins.has(cNorm)){p=templateProducts.find(p=>p.name===ALIAS[cNorm]);if(p)return p;}
   const words=c.split(/\s+/);
-  for(const w of words){if(ALIAS[w]&&!deletedBuiltins.has(w)){p=templateProducts.find(p=>p.name===ALIAS[w]);if(p)return p;}}
+  if(!cSelf){for(const w of words){if(ALIAS[w]&&!deletedBuiltins.has(w)){p=templateProducts.find(p=>p.name===ALIAS[w]);if(p)return p;}}}
   for(const w of words){if(/[Xx×]/.test(w)){const w2=w.replace(/[Xx×]/g,'*');if(ALIAS[w2]&&!deletedBuiltins.has(w2)){p=templateProducts.find(p=>p.name===ALIAS[w2]);if(p)return p;}}}
   if(c.endsWith('透')){const base=c.slice(0,-1);p=templateProducts.find(p=>p.name===base);if(p)return p;if(ALIAS[base]&&!deletedBuiltins.has(base)){p=templateProducts.find(p=>p.name===ALIAS[base]);if(p)return p;}p=templateProducts.find(p=>p.name.includes(base));if(p)return p;}
   for(const sf of['白色','黑色','白','黑']){if(c.endsWith(sf)){const ba=c.slice(0,-sf.length);if(ALIAS[ba]&&!deletedBuiltins.has(ba)){const t=ALIAS[ba];if(sf==='白'||sf==='白色'){p=templateProducts.find(p=>p.name===t.replace(/碗$/,'白碗'));if(p)return p}else{p=templateProducts.find(p=>p.name===t.replace(/碗$/,'黑碗'));if(p)return p}}}}
   const isLid=/[盖蓋]/.test(c)&&!/碗/.test(c);
-  const pool=isLid?templateProducts.filter(p=>/[盖蓋]/.test(p.name)||p.name.includes('盒蓋')):templateProducts;
+  let pool=isLid?templateProducts.filter(p=>/[盖蓋]/.test(p.name)||p.name.includes('盒蓋')):templateProducts;
+  // 前缀族保护：HS(韩盛)开头的输入只允许命中 HS 开头的产品，避免错落到 H 系列
+  const hsIn=/^HS/i.test(c);
+  if(hsIn)pool=pool.filter(p=>/^HS/i.test(p.name));
   if(c.length>=3){p=pool.find(p=>p.name.toLowerCase().includes(lc));if(p)return p;}
-  p=pool.find(p=>lc.includes(p.name.toLowerCase()));if(p)return p;
+  p=pool.find(p=>lc.includes(p.name.toLowerCase()));if(p)return p; // 修饰词场景（黑色美星700碗）；错配由 HS 前缀保护+学习别名兜底
   const c2=c.replace(/[\s\-_—–]/g,'').toLowerCase();p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'').toLowerCase()===c2);if(p)return p;
   if(ALIAS[c]&&!deletedBuiltins.has(c)){const ac=ALIAS[c].replace(/[\s\-_—–]/g,'');p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'')===ac);if(p)return p;}
   const c3=c.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();
   p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();return tp===c3;});if(p)return p;
-  if(c3.length>=3){p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();return tp.includes(c3);});if(p)return p;}
+  if(c3.length>=3){p=pool.find(p=>{const tp=p.name.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();return tp.startsWith(c3);});if(p)return p;}
   return null;
 }
 function isExcluded(n){if(!n)return false;if(n==='甘蔗中更'||n==='中更')return false;for(const e of EXCLUDE)if(n===e||n.includes(e))return true;for(const e of learnedExcludes)if(n===e||n.includes(e))return true;return false;}
