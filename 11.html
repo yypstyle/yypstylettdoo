@@ -686,6 +686,9 @@ const ALIAS = {
   'H1000透碗':'H1000','H1100碗':'H1250碗','H-1100碗':'H1250碗','H1500透碗':'H1250碗','H1500黑碗':'H1250碗','H1500碗':'H1250碗','H-1500碗':'H1250碗','1500白碗':'H1250白碗','HS3000白碗':'HS1750碗',
   'H500':'H500','H500透碗':'H500','H500方':'H500','500盒':'H500',
   'H1100透碗':'H1100碗','H1100黑碗':'H1100碗','1100透碗':'H1250碗','HS1100透碗':'Y1200碗',
+  // 统一规则（2026-09-25）：H1500黑/透→H1250碗；銀橋美式750黑→H750；雄威透明→H1250碗
+  'H-1500碗黑':'H1250碗','雄威透明1250':'H1250碗','雄威透明':'H1250碗',
+  '銀橋美式750黑':'H750','銀橋美式750黑色':'H750','銀橋750美式黑':'H750',
   // 碗类颜色变体：H12/H16/H20/H24/H30
   'H12透碗':'H12碗','H12黑碗':'H12碗','H16透碗':'H16碗','H16黑碗':'H16碗',
   'H20透碗':'H20碗','H20黑碗':'H20碗','H20碗':'H24碗','H-20碗':'H24碗',
@@ -778,7 +781,7 @@ const ALIAS = {
   '甘蔗碟7寸圓碟':'7"甘蔗圓碟','甘蔗碗16安':'16安紙碗',
   '甘蔗蛋碟7.5x10':'7.5"甘蔗旦碟','甘蔗蛋碟7.5x10"':'7.5"甘蔗旦碟','甘蔗圓碟':'9"甘蔗圓碟','加厚甘蔗圓碟':'7"甘蔗圓碟(加厚)',
   // （原 '500ml盒':'580紙盒' 等四条已删：被下方 H 系列映射覆盖的死代码，避免混淆）
-  '500-1000ml 蓋':'172紙蓋','500-1000ml蓋':'172紙蓋',
+  // （'500-1000ml*蓋' 统一在下方映射到 盒蓋，此处不再重复定义）
   '6口徑白色6*197三層':'6*197 三層紙飲管','6口徑6*197三層':'6*197 三層紙飲管',
   '6*197三層紙包':'6*197 三層紙飲管',
   '12*200四層斜口紙包':'12*197 四層紙飲管',
@@ -798,7 +801,7 @@ const ALIAS = {
   '500ml':'H500','500ml盒':'H500','580ml盒':'580紙盒',
   '650盒':'H650','750盒':'H750','1000盒':'H1000',
   '850蓋':'850蓋','850盖':'850蓋',
-  '500-1000ml 蓋':'盒蓋','500-1000ml盖':'盒蓋',
+  '500-1000ml 蓋':'盒蓋','500-1000ml盖':'盒蓋','500-1000ml蓋':'盒蓋','500-1000ml':'盒蓋',
   '22安紙碗':'22安紙碗','22安纸碗':'22安紙碗',
   '1安甘蔗杯':'1安甘蔗杯','2安甘蔗杯':'2安甘蔗杯',
   'HS4安杯':'HS3安杯','HS4安杯(替代)':'HS3安杯',
@@ -1547,6 +1550,14 @@ function matchProduct(inputName,rawLine){
   const lc=c.toLowerCase();
   p=templateProducts.find(p=>p.name.toLowerCase()===lc);if(p)return p;
   if(cNorm!==c&&ALIAS[cNorm]&&!deletedBuiltins.has(cNorm)){p=templateProducts.find(p=>p.name===ALIAS[cNorm]);if(p)return p;}
+  // 2b. 去掉行首 X/x 前缀后按别名重试（装车单手写习惯："X1000美式透明盒" → 别名"1000美式透明盒"）
+  if(/^[Xx]/.test(c)&&c.length>1){
+    const cx=c.replace(/^[Xx][-\s]?/,'');
+    if(cx&&cx!==c){
+      if(learnedAliases[cx]){p=templateProducts.find(p=>p.name===learnedAliases[cx]);if(p)return p;}
+      if(ALIAS[cx]&&!deletedBuiltins.has(cx)){p=templateProducts.find(p=>p.name===ALIAS[cx]);if(p)return p;}
+    }
+  }
   const words=c.split(/\s+/);
   if(!cSelf){for(const w of words){if(ALIAS[w]&&!deletedBuiltins.has(w)){p=templateProducts.find(p=>p.name===ALIAS[w]);if(p)return p;}}}
   for(const w of words){if(/[Xx×]/.test(w)){const w2=w.replace(/[Xx×]/g,'*');if(ALIAS[w2]&&!deletedBuiltins.has(w2)){p=templateProducts.find(p=>p.name===ALIAS[w2]);if(p)return p;}}}
@@ -1572,7 +1583,9 @@ function isNotCustomsName(n){
   if(n==='HK')return true; // 独立HK（如"HK 11"空格分割后变成裸HK）
   if(n.includes('不报'))return true; // 模板标记"（不报）"的产品不报关
   if(n.includes('L999'))return true;
-  if(/^X[-]?\d/i.test(n)||/^CH[-]?\d/i.test(n)||/^HK[-]?\d/i.test(n)||/^L[-]?\d/i.test(n)||/^G[-]?\d/i.test(n)||/^C[-]?\d/i.test(n)||/^M[-]?\d/i.test(n)||/^N[-]?\d/i.test(n))return true;
+  // 裸内部编号（整个字符串就是「字母+数字」，不含中文/碗盒杯蓋等产品词）才视为不报关
+  // 例：X04 / X23 / CH23 / HK 11 / L999 → 不报关；X1000美式透明盒 / L4蓋 → 是产品，不能拦
+  if(/^(?:X|CH|HK|L|G|C|M|N)[-]?\s?\d+[\s.。]*$/i.test(n))return true;
   return false;
 }
 
