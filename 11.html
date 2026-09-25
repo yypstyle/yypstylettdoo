@@ -1811,9 +1811,10 @@ function confirmLearn(){
   if(parsed&&parsed.name&&parsed.name!==pendingLearnName){
     learnedAliases[parsed.name]=templateName;
   }
-  // 也存各空格分词
+  // 也存各空格分词（跳过通用颜色/属性词——学习"韓盛1020 透明"不应生成裸"透明"别名）
+  const LEARN_STOPWORDS=['透明','白色','黑色','加厚'];
   for(const w of pendingLearnName.split(/\s+/)){
-    if(w.length>=2&&w!==pendingLearnName)learnedAliases[w]=templateName;
+    if(w.length>=2&&w!==pendingLearnName&&!LEARN_STOPWORDS.includes(w))learnedAliases[w]=templateName;
   }
   saveLearnedAliases();
   alert(`已学习: "${pendingLearnName}" → "${templateName}"\n下次自动识别`);
@@ -1889,8 +1890,9 @@ function importLearned(e){
   r.onload=function(ev){
     try{
       const d=JSON.parse(ev.target.result);
-      if(d.aliases){Object.assign(learnedAliases,d.aliases);}
-      else{Object.assign(learnedAliases,d);}
+      // 已删除的条目(deletedBuiltins)不复活
+      const incoming=d.aliases||d;
+      for(const [k,v] of Object.entries(incoming)){if(!deletedBuiltins.has(k))learnedAliases[k]=v;}
       if(d.excludes){for(const x of d.excludes)if(!learnedExcludes.includes(x))learnedExcludes.push(x);}
       saveLearnedAliases();refreshLearnUI();
       alert(`已导入 ${Object.keys(learnedAliases).length} 别名 + ${learnedExcludes.length} 不报关`);
@@ -2321,8 +2323,9 @@ function nextOrder(){
 		    var resp=await fetch('./aliases.json',{cache:'no-store'});
 		    if(!resp.ok)return;
 		    var d=await resp.json();
-		    if(d.aliases){Object.assign(learnedAliases,d.aliases);}
-		    else{Object.assign(learnedAliases,d);}
+		    // 已删除的条目(deletedBuiltins)不复活
+		    const incoming=d.aliases||d;
+		    for(const k in incoming){if(!deletedBuiltins.has(k))learnedAliases[k]=incoming[k];}
 		    if(d.excludes){for(var i=0;i<d.excludes.length;i++){if(!learnedExcludes.includes(d.excludes[i]))learnedExcludes.push(d.excludes[i]);}}
 		    saveLearnedAliases();refreshLearnUI();
 		    console.log('已加载服务器别名规则');
