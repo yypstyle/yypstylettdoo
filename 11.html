@@ -71,13 +71,15 @@ h1{
   text-align:left;color:var(--text);
 }
 h1::before{
-  content:'';width:28px;height:28px;flex:none;border-radius:10px;
+  content:'◆';display:flex;align-items:center;justify-content:center;
+  width:28px;height:28px;flex:none;border-radius:10px;
   background:linear-gradient(160deg,rgba(56,189,248,.30),rgba(56,189,248,.07));
   border:1px solid rgba(125,211,252,.30);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.20);
+  color:#8fdcff;font-size:13px;line-height:1;
 }
 h1::after{
-  content:'v6.4';font-family:var(--mono);font-size:11px;font-weight:600;color:#8fdcff;
+  content:'v6.5';font-family:var(--mono);font-size:11px;font-weight:600;color:#8fdcff;
   padding:2px 7px;border-radius:7px;letter-spacing:0;
   background:rgba(56,189,248,.12);border:1px solid rgba(125,211,252,.22);
 }
@@ -2368,29 +2370,39 @@ function applyWeight(){
 
 function showWeightDiff(before,after){
   let html='<div style="margin-top:12px;padding:12px;background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-radius:8px">';
-  html+='<div style="font-size:13px;font-weight:600;color:var(--cyan);margin-bottom:8px">📊 调整前后微信消息对比</div>';
+  html+='<div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:8px">📊 调整前后微信消息对比</div>';
   let totalBefore={tQty:0,tNet:0,tGross:0,tPrice:0};
   let totalAfter={tQty:0,tNet:0,tGross:0,tPrice:0};
-  let changedCount=0;
+  // 先算每组变化，有变化的排前面（组号保留原文位置），无变化的排后面
+  const rows=[];
   for(let i=0;i<Math.max(before.length,after.length);i++){
     const b=before[i]||{};
     const a=after[i]||{};
     totalBefore.tQty+=b.tQty||0;totalBefore.tNet+=b.tNet||0;totalBefore.tGross+=b.tGross||0;totalBefore.tPrice+=b.tPrice||0;
     totalAfter.tQty+=a.tQty||0;totalAfter.tNet+=a.tNet||0;totalAfter.tGross+=a.tGross||0;totalAfter.tPrice+=a.tPrice||0;
     const changed=b.tQty!==a.tQty||Math.abs(b.tNet-a.tNet)>0.01||Math.abs(b.tPrice-a.tPrice)>0.01;
-    if(changed)changedCount++;
-    html+=`<div style="padding:6px 8px;margin:4px 0;background:${changed?'rgba(245,158,11,.08)':'rgba(8,12,20,.3)'};border-radius:6px;font-size:12px">`;
-    html+=`<span style="font-weight:600;">第${i+1}组</span> ${b.variety||a.variety||''} ${changed?'<span style="color:var(--amber);font-size:10px">⚠变化</span>':'<span style="color:var(--text-tri);font-size:10px">无变化</span>'}<br>`;
-    if(changed){
-      html+=`箱数: ${b.tQty}→<b>${a.tQty}</b> (${a.tQty-b.tQty>0?'+':''}${a.tQty-b.tQty}) `;
-      html+=`净重: ${(b.tNet||0).toFixed(1)}→<b>${(a.tNet||0).toFixed(1)}</b> `;
-      html+=`金额: ${(b.tPrice||0).toFixed(2)}→<b>${(a.tPrice||0).toFixed(2)}</b>`;
-    }
-    html+='</div>';
+    rows.push({no:i+1,b,a,changed});
+  }
+  const changedRows=rows.filter(r=>r.changed);
+  const sameRows=rows.filter(r=>!r.changed);
+  if(changedRows.length>0){
+    html+='<div style="font-size:12px;color:var(--amber);margin-bottom:6px">⚠ 有变化: '+changedRows.map(r=>'第'+r.no+'组').join('、')+'</div>';
+  }else{
+    html+='<div style="font-size:12px;color:var(--text-tri);margin-bottom:6px">所有组均无变化</div>';
+  }
+  for(const r of changedRows){
+    html+=`<div style="padding:6px 8px;margin:4px 0;background:rgba(245,158,11,.08);border-radius:6px;font-size:12px">`;
+    html+=`<span style="font-weight:600;">第${r.no}组</span> ${r.b.variety||r.a.variety||''} <span style="color:var(--amber);font-size:10px">⚠变化</span><br>`;
+    html+=`箱数: ${r.b.tQty}→<b>${r.a.tQty}</b> (${r.a.tQty-r.b.tQty>0?'+':''}${r.a.tQty-r.b.tQty}) `;
+    html+=`净重: ${(r.b.tNet||0).toFixed(1)}→<b>${(r.a.tNet||0).toFixed(1)}</b> `;
+    html+=`金额: ${(r.b.tPrice||0).toFixed(2)}→<b>${(r.a.tPrice||0).toFixed(2)}</b></div>`;
+  }
+  for(const r of sameRows){
+    html+=`<div style="padding:4px 8px;margin:2px 0;background:rgba(8,12,20,.3);border-radius:6px;font-size:11px;color:var(--text-tri)">第${r.no}组 ${r.b.variety||r.a.variety||''} 无变化</div>`;
   }
   html+=`<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(56,189,248,.15);font-size:11px;color:var(--text-sec)">`;
   html+=`总计: 箱数 ${totalBefore.tQty}→<b>${totalAfter.tQty}</b> · 净重 ${totalBefore.tNet.toFixed(1)}→<b>${totalAfter.tNet.toFixed(1)}</b> kg · 金额 ¥${totalBefore.tPrice.toFixed(2)}→<b>¥${totalAfter.tPrice.toFixed(2)}</b>`;
-  html+=` · <span style="color:var(--amber)">${changedCount} 组发生变化</span></div></div>`;
+  html+=` · <span style="color:var(--amber)">${changedRows.length} 组发生变化</span></div></div>`;
   showResult(html,'磅单调整对比');
 }
 

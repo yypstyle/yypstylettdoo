@@ -1,5 +1,5 @@
 /* ===== 报关初稿生成器 v6.5 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.5-v70-deepglass';
+const CACHE_NAME = 'customs-v6.5-v71-deepglass';
 
 const PRECACHE_URLS = [
   './11.html',
