@@ -1,5 +1,5 @@
 /* ===== 报关初稿生成器 v6.5 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.5-v72-deepglass';
+const CACHE_NAME = 'customs-v6.5-v73-deepglass';
 
 const PRECACHE_URLS = [
   './11.html',
@@ -51,21 +51,34 @@ self.addEventListener('fetch', event => {
   // 只处理 GET 请求
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // 同源核心资源（页面/模板/清单）：网络优先——在线时永远拿最新版，
+  // 断网或超时才回退缓存。解决"上传后手机要开两次才更新"的问题。
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+        }
+        return response;
+      }).catch(() =>
+        caches.match(event.request).then(c => c || caches.match('./11.html'))
+      )
+    );
+    return;
+  }
+
+  // 跨域 CDN 库：缓存优先 + 后台更新（库内容基本不变，省流量）
   event.respondWith(
     caches.open(CACHE_NAME).then(cache => {
       return cache.match(event.request).then(cached => {
-        // 后台更新：发起网络请求更新缓存
         const fetched = fetch(event.request).then(response => {
-          // 只缓存成功的响应
-          if (response && response.status === 200 && response.type === 'basic') {
+          if (response && response.status === 200) {
             cache.put(event.request, response.clone());
           }
           return response;
-        }).catch(() => {
-          // 网络失败，如果已有缓存则忽略（会返回下方的 cached）
-        });
-
-        // 优先返回缓存，缓存不存在时等待网络
+        }).catch(() => {});
         return cached || fetched;
       });
     })
