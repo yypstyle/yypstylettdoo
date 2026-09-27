@@ -6,8 +6,8 @@
   "display": "minimal-ui",
   "display_override": ["minimal-ui","standalone"],
   "orientation": "portrait",
-  "background_color": "#080c14",
-  "theme_color": "#00d4ff",
+  "background_color": "#050a16",
+  "theme_color": "#38bdf8",
   "launch_handler": {"client_mode": "auto"},
   "share_target": {
     "action": "./11.html",
