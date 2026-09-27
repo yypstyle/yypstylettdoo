@@ -1869,14 +1869,25 @@ function renderMatch(matched,unmatched,excluded){
   }
   document.getElementById('editList').innerHTML=html;
 }
+// 供应商显示短名（下拉框宽度有限，切换仍用全名）
+const SUPPLIER_SHORT={
+  '深圳興明發':'興明發','河南海翔新材料科技有限公司':'河南海翔','韶能集团绿洲生态(新丰)科技有限公司':'韶能',
+  '江苏金晟环保餐具有限公司':'江苏金晟','旺盟(上海)新材料科技有限公司':'旺盟上海','浙江福昌环保科技有限公司':'浙江福昌',
+  '青橄榄环保科技（东莞）有限公司':'青橄榄','溫洲捷弗瑞材料有限公司':'捷弗瑞','河北稻香环保科技有限公司':'稻香',
+  '江苏徐洲青青紙制品':'青青紙品','東莞中央化學':'中央化學','汕頭韓盛':'韓盛','東莞美星':'美星',
+  '東莞茂盈':'茂盈','大江環保':'大江','河北山楂树':'山楂树','浙江众鑫环保科技集团股份有限公司':'浙江众鑫',
+  '珠海市友科塑料制品有限公司':'珠海友科','東莞伟利兴':'伟利兴','台山長江':'台山長江','辰润':'辰润',
+  '溧洲捷弗瑞材料有限公司':'溧捷弗瑞',
+};
+function supplierShort(s){if(!s)return '';return SUPPLIER_SHORT[s]||(s.length>9?s.slice(0,9):s);}
 function renderSupplier(m,idx){
   const alts=prodAlts[m.product.name];
-  if(!alts||alts.length<=1)return escHtml(m.product.supplier);
-  // 供应商下拉
+  if(!alts||alts.length<=1)return escHtml(supplierShort(m.product.supplier));
+  // 供应商下拉：value=全名（切换逻辑用），显示=短名
   let opts='';
   for(const a of alts){
     const sel=a.supplier===m.product.supplier?' selected':'';
-    opts+=`<option value="${escHtml(a.supplier)}"${sel}>${escHtml(a.supplier)}</option>`;
+    opts+=`<option value="${escHtml(a.supplier)}"${sel}>${escHtml(supplierShort(a.supplier))}</option>`;
   }
   return `<select style="font-size:12px;font-family:var(--mono);background:rgba(4,10,22,.5);color:var(--text);border:1px solid rgba(255,255,255,.16);border-radius:7px;padding:4px 6px;max-width:100%" onchange="switchSupplier(${idx},this.value)">${opts}</select>`;
 }
