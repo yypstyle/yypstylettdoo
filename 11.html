@@ -1050,7 +1050,8 @@ function cntStr(n){return COUNT_MAP[n]||'多種';}
 const EXCLUDE = ['X-04','X-11','X-18','X-23','X-28','X-66','X23A','X25','X66','X56',
   'CH11','CH18','CH19','CH23','CH28','CH55A','HK11','HK21','HK23','HK28','HK66',
   'L-03','L23','L50','L28X','L55','L-50','G12A','G50','M1','M-1','N750',
-  '330樽','KS102X','C-55','C55','C-12A','银桥1200透明','必事利','3012碟','中一深帶扣','中一深带扣','新中一深S1','特一深',
+  // '330樽'已转为辰润正式报关产品（V10模板），从排除表移除
+  'KS102X','C-55','C55','C-12A','银桥1200透明','必事利','3012碟','中一深帶扣','中一深带扣','新中一深S1','特一深',
   '1000甘蔗盒','1000甘蔗盒盖','F25','LBK999白','LBK700','LBK142','LBK','白LBK'];
 const ORIGIN = {
   '汕頭韓盛':'汕頭','深圳興明發':'深圳','東莞茂盈':'東莞','東莞中央化學':'東莞',
@@ -1940,8 +1941,8 @@ function loadLearnedAliases(){
   try{const s=localStorage.getItem('v63learned');if(s){const d=JSON.parse(s);for(const [k,v] of Object.entries(d)){if(!deletedBuiltins.has(k))learnedAliases[k]=v;}}}catch(e){}
   learnedExcludes=[...BUILTIN_EXCLUDES];
   try{const s=localStorage.getItem('v63exclude');if(s){const d=JSON.parse(s);for(const x of d)if(!learnedExcludes.includes(x))learnedExcludes.push(x);}}catch(e){}
-  // V8: 300/600/750樽已是辰润正式报关产品，清除历史学习排除记录
-  for(const z of ['300樽','600樽','750樽']){
+  // V8: 300/600/750樽已是辰润正式报关产品，清除历史学习排除记录；V10: 330樽同
+  for(const z of ['300樽','600樽','750樽','330樽']){
     const i=learnedExcludes.indexOf(z);
     if(i>=0){learnedExcludes.splice(i,1);try{const s2=localStorage.getItem('v63exclude');const d2=s2?JSON.parse(s2):[];const j=d2.indexOf(z);if(j>=0){d2.splice(j,1);localStorage.setItem('v63exclude',JSON.stringify(d2));}}catch(e){}}
   }
