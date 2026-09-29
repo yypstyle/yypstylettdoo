@@ -80,6 +80,12 @@ h1::before{
 }
 /* 版本徽标已移除：避免缓存混用时出现两个版本号 */
 
+/* ===== 磅单行控件：统一 44px 等高（禁用原生外观防错位）===== */
+.w-sel,.w-inp{height:44px;box-sizing:border-box;padding:0 12px;border:1px solid rgba(56,189,248,.18);border-radius:8px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px;-webkit-appearance:none;appearance:none}
+.w-sel{flex:0 0 96px;font-weight:600;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238fdcff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.w-sel option{background:#0c1a30;color:var(--text)}
+.w-inp{flex:1;font-family:var(--mono)}
+
 /* ===== 玻璃卡片 ===== */
 .card{
   position:relative;overflow:hidden;margin-bottom:14px;padding:16px;
@@ -738,17 +744,37 @@ input[type=checkbox]{width:16px;height:16px;accent-color:#38bdf8}
 	      <button class="btn btn-sm" id="wModeDelta" onclick="setWeightMode('delta')" style="flex:1">➕ 增减模式</button>
 	      <button class="btn btn-sm" id="wModeTotal" onclick="setWeightMode('total')" style="flex:1">🎯 总净重模式</button>
 	    </div>
-	    <div style="display:flex;gap:8px;align-items:center;margin:8px 0">
-	      <select id="weightDir" onchange="saveWeightPrefs()" style="flex:0 0 88px;padding:10px;border:1px solid rgba(56,189,248,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px">
+	    <div id="wSingleRow" style="display:flex;gap:8px;align-items:center;margin:8px 0">
+	      <select id="weightDir" onchange="saveWeightPrefs()" class="w-sel">
 	        <option value="1">➕ 增加</option>
 	        <option value="-1">➖ 减少</option>
 	      </select>
-	      <input type="number" id="targetWeight" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" style="flex:1;padding:10px;border:1px solid rgba(56,189,248,.15);border-radius:6px;background:rgba(8,12,20,.6);color:var(--text);font-size:14px;font-family:var(--mono)">
+	      <input type="number" id="targetWeight" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" class="w-inp">
 	      <span style="white-space:nowrap;font-size:13px;color:var(--text-sec)">kg</span>
+	    </div>
+	    <div id="wDualRows" style="display:none">
+	      <div style="font-size:12px;color:var(--text-sec);margin:8px 0 2px;font-weight:600">兴明发 <span id="curXmfTxt" style="font-weight:400;color:var(--text-tri)"></span></div>
+	      <div style="display:flex;gap:8px;align-items:center;margin:4px 0">
+	        <select id="dirXmf" onchange="saveWeightPrefs()" class="w-sel">
+	          <option value="1">➕ 增加</option>
+	          <option value="-1">➖ 减少</option>
+	        </select>
+	        <input type="number" id="valXmf" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" class="w-inp">
+	        <span style="white-space:nowrap;font-size:13px;color:var(--text-sec)">kg</span>
+	      </div>
+	      <div style="font-size:12px;color:var(--text-sec);margin:10px 0 2px;font-weight:600">海翔 <span id="curHxTxt" style="font-weight:400;color:var(--text-tri)"></span></div>
+	      <div style="display:flex;gap:8px;align-items:center;margin:4px 0">
+	        <select id="dirHx" onchange="saveWeightPrefs()" class="w-sel">
+	          <option value="1">➕ 增加</option>
+	          <option value="-1">➖ 减少</option>
+	        </select>
+	        <input type="number" id="valHx" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" class="w-inp">
+	        <span style="white-space:nowrap;font-size:13px;color:var(--text-sec)">kg</span>
+	      </div>
 	    </div>
 	    <div style="display:flex;align-items:center;margin:8px 0;font-size:13px;color:var(--text-sec)">
 	      <input type="checkbox" id="inclHX" onchange="saveWeightPrefs()" style="width:16px;height:16px;margin-right:6px;accent-color:#38bdf8">
-	      <label for="inclHX" style="cursor:pointer;-webkit-tap-highlight-color:transparent">包含河南海翔产品参与调整（增减均可）</label>
+	      <label for="inclHX" style="cursor:pointer;-webkit-tap-highlight-color:transparent">包含河南海翔产品参与调整（勾选后兴明发/海翔分开输入、分开调整）</label>
 	    </div>
 	    <div id="inclNewRow" style="display:none;align-items:center;margin:8px 0;font-size:13px;color:var(--text-sec)">
 	      <input type="checkbox" id="inclNew" onchange="saveWeightPrefs()" style="width:16px;height:16px;margin-right:6px;accent-color:#10b981">
@@ -929,7 +955,12 @@ const ALIAS = {
   '6 X197四散':'6*197 四層紙飲管','6 X197四紙包':'6*197四層獨立紙包',
   '7 X197四散':'7*197 四層紙飲管','7 X197四紙包':'7*197四層獨立紙包',
   '12 X197四散':'12*197 四層紙飲管','12 X197四紙包':'12*197四層獨立紙包',
-  '10寸三格碟':'10"甘蔗三格圓碟','12x197三层散':'6*197 三層紙飲管',
+  // 2026-09-29 修正：'10"甘蔗三格圓碟' 不在 V10 模板（只有 9"三格 行179 / 10"无三格 行180），
+  // 旧目标导致 10寸三格碟 永远匹配不上；对齐 aliases.json 与模板实有品名。+ HISY 手写变体
+  '10寸三格碟':'10"甘蔗圓碟','10寸3格碟':'10"甘蔗圓碟','10寸甘蔗三格碟':'10"甘蔗圓碟',
+  'HISY1200黑碗':'Y1200碗','HISY1200':'Y1200碗',
+  '12白':'H12白碗','16白':'H16白碗','30白':'H30白碗',
+  '12x197三层散':'6*197 三層紙飲管',
   '12PP碗':'H12碗','12PP':'H12碗','16PP碗':'H16碗','16PP':'H16碗',
   '24PP碗':'H24碗','24PP':'H24碗','30PP碗':'H30碗','30PP':'H30碗',
   '12-16PP蓋':'H12-16碗蓋','12-16PP':'H12-16碗蓋',
@@ -2119,53 +2150,58 @@ function setWeightMode(mode){
 }
 function applyWeightModeUI(mode){
   const bd=document.getElementById('wModeDelta'),bt=document.getElementById('wModeTotal');
-  const dir=document.getElementById('weightDir');
+  const hx=document.getElementById('inclHX').checked;
   const active='background:linear-gradient(135deg,var(--cyan),#22a7d8);color:#fff';
   const idle='background:rgba(8,12,20,.6);color:var(--text-sec)';
   bd.style.cssText='flex:1;padding:6px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;'+(mode==='delta'?active:idle);
   bt.style.cssText='flex:1;padding:6px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;'+(mode==='total'?active:idle);
-  dir.style.display=mode==='delta'?'block':'none';
-  // 「新增型号补足」仅在 增减模式+增加方向 有意义
-  const showNew=mode==='delta'&&dir.value==='1';
-  document.getElementById('inclNewRow').style.display=showNew?'flex':'none';
-  if(!showNew)document.getElementById('inclNew').checked=false;
-}
-function applyWeightDirUI(){
-  const keep=localStorage.getItem('weightInclNew')==='1';
-  document.getElementById('inclNew').checked=keep;
-  applyWeightModeUI(localStorage.getItem('weightMode')||'delta');
+  // 单池 / 双池行切换（勾海翔 → 双输入框）
+  document.getElementById('wSingleRow').style.display=hx?'none':'flex';
+  document.getElementById('wDualRows').style.display=hx?'block':'none';
+  const dirVis=mode==='delta'?'block':'none';
+  document.getElementById('weightDir').style.display=dirVis;
+  document.getElementById('dirXmf').style.display=dirVis;
+  document.getElementById('dirHx').style.display=dirVis;
+  // 「允许新增」增减模式与总净重模式都可用（差额为正的池才会真正新增）
+  document.getElementById('inclNewRow').style.display='flex';
 }
 function saveWeightPrefs(){
+  localStorage.setItem('weightMode',localStorage.getItem('weightMode')||'delta');
   localStorage.setItem('weightDir',document.getElementById('weightDir').value);
+  localStorage.setItem('weightDirXmf',document.getElementById('dirXmf').value);
+  localStorage.setItem('weightDirHx',document.getElementById('dirHx').value);
   localStorage.setItem('weightInclHX',document.getElementById('inclHX').checked?'1':'0');
   localStorage.setItem('weightInclNew',document.getElementById('inclNew').checked?'1':'0');
-  // 方向切换时刷新「允许新增」可见性（仅增重可用）
   applyWeightModeUI(localStorage.getItem('weightMode')||'delta');
-  if(document.getElementById('inclNewRow').style.display==='flex')document.getElementById('inclNew').checked=localStorage.getItem('weightInclNew')==='1';
 }
 function matchWeight(){
   if(matchedItems.length===0){alert('没有匹配数据');return;}
-  let curNet=0,xmfN=0,hxN=0;
+  let curAll=0,curXmf=0,curHx=0,xmfN=0,hxN=0;
   for(let i=0;i<matchedItems.length;i++){
     const m=matchedItems[i];
-    curNet+=m.product.netWeight*m.qty;
-    if(m.product.supplier===XMF_SUPPLIER)xmfN++;
-    else if(m.product.supplier===HX_SUPPLIER)hxN++;
+    curAll+=m.product.netWeight*m.qty;
+    if(m.product.supplier===XMF_SUPPLIER){xmfN++;curXmf+=m.product.netWeight*m.qty;}
+    else if(m.product.supplier===HX_SUPPLIER){hxN++;curHx+=m.product.netWeight*m.qty;}
   }
   document.getElementById('weightInfo').innerHTML=
-    `<span style="color:var(--cyan)">当前整车总净重: <b>${curNet.toFixed(1)} kg</b></span> · 兴明发 ${xmfN} 种`+(hxN>0?` · 海翔 ${hxN} 种`:'');
-  // 恢复上次模式/方向/勾选
+    `<span style="color:var(--cyan)">当前整车总净重: <b>${curAll.toFixed(1)} kg</b></span> · 兴明发 ${xmfN} 种 / ${curXmf.toFixed(1)} kg`+(hxN>0?` · 海翔 ${hxN} 种 / ${curHx.toFixed(1)} kg`:'');
+  document.getElementById('curXmfTxt').textContent=`(当前 ${curXmf.toFixed(1)} kg)`;
+  document.getElementById('curHxTxt').textContent=`(当前 ${curHx.toFixed(1)} kg)`;
+  // 恢复上次模式/方向；海翔/新增勾选默认不勾（海翔调整为少数情况）
+  document.getElementById('inclHX').checked=false;
   applyWeightModeUI(localStorage.getItem('weightMode')||'delta');
   document.getElementById('weightDir').value=localStorage.getItem('weightDir')||'1';
-  document.getElementById('inclHX').checked=localStorage.getItem('weightInclHX')==='1';
-  // 方向恢复后再刷新一次可见性，并恢复「允许新增」勾选
-  applyWeightDirUI();
+  document.getElementById('dirXmf').value=localStorage.getItem('weightDirXmf')||'1';
+  document.getElementById('dirHx').value=localStorage.getItem('weightDirHx')||'1';
+  document.getElementById('inclNew').checked=false;
   document.getElementById('targetWeight').value='';
+  document.getElementById('valXmf').value='';
+  document.getElementById('valHx').value='';
   document.getElementById('weightSuggest').innerHTML='';
   document.getElementById('btnApplyWeight').disabled=true;
   weightPlan=null;weightBeforeSnapshot=null;
   document.getElementById('weightModal').style.display='flex';
-  document.getElementById('targetWeight').focus();
+  (document.getElementById('inclHX').checked?document.getElementById('valXmf'):document.getElementById('targetWeight')).focus();
 }
 
 // 通用磅单匹配：均匀分摊+微调——差额由各产品均匀承担（在现有箱数上同向小幅增减），
@@ -2243,87 +2279,112 @@ function findBestPlan(xmf,diff,N){
 
 function calcWeight(){
   const mode=localStorage.getItem('weightMode')||'delta';
-  const val=parseFloat(document.getElementById('targetWeight').value);
-  if(!val||val<=0){alert('请输入有效数值');return;}
   const inclHX=document.getElementById('inclHX').checked;
   const inclNew=document.getElementById('inclNew').checked;
-  const mode0=localStorage.getItem('weightMode')||'delta';
-  const dirVal=parseInt(document.getElementById('weightDir').value)||1;
-  const canAddNew=inclNew&&mode0==='delta'&&dirVal===1;
-  let xmf=[];
-  let curNet=0;
+  const N=parseInt(document.getElementById('adjCount').value)||0;
+  let curAll=0,curXmf=0,curHx=0;
   const inCar=new Set();
   for(let i=0;i<matchedItems.length;i++){
     const m=matchedItems[i];
-    curNet+=m.product.netWeight*m.qty;
-    inCar.add(m.product.name+'|'+m.product.supplier);
-    if(m.product.supplier===XMF_SUPPLIER)xmf.push({idx:i,qty:m.qty,perKg:m.product.netWeight,name:m.product.name});
-    else if(inclHX&&m.product.supplier===HX_SUPPLIER)xmf.push({idx:i,qty:m.qty,perKg:m.product.netWeight,name:m.product.name});
+    const w=m.product.netWeight*m.qty;
+    curAll+=w;inCar.add(m.product.name+'|'+m.product.supplier);
+    if(m.product.supplier===XMF_SUPPLIER)curXmf+=w;
+    else if(m.product.supplier===HX_SUPPLIER)curHx+=w;
   }
-  // 增重时允许把车次外的产品型号作为新行加入（兴明发必入池，勾海翔则海翔也入池）
-  // 规则：带品牌的型号（getBrand 有值）不参与新增，只新增无品牌型号
-  if(canAddNew){
-    for(const tp of templateProducts){
-      if(tp.netWeight<=0)continue;
-      if(tp.supplier!==XMF_SUPPLIER&&!(inclHX&&tp.supplier===HX_SUPPLIER))continue;
-      if(inCar.has(tp.name+'|'+tp.supplier))continue;
-      if(getBrand(tp.name,tp.supplier,tp.row))continue;
-      xmf.push({idx:-1-xmf.length,qty:0,perKg:tp.netWeight,name:tp.name,isNew:true,product:tp});
+  // 建池：hx=false 兴明发池 / true 海翔池；inclNew 且该池差额为正时，车次外无品牌型号入池
+  const buildPool=(hx,diff)=>{
+    const pool=[];
+    for(let i=0;i<matchedItems.length;i++){
+      const m=matchedItems[i];
+      if(hx? m.product.supplier===HX_SUPPLIER : m.product.supplier===XMF_SUPPLIER)
+        pool.push({idx:i,qty:m.qty,perKg:m.product.netWeight,name:m.product.name,sup:hx?'海翔':'兴明发'});
+    }
+    if(inclNew&&diff>0){
+      for(const tp of templateProducts){
+        if(tp.netWeight<=0)continue;
+        if(hx? tp.supplier!==HX_SUPPLIER : tp.supplier!==XMF_SUPPLIER)continue;
+        if(inCar.has(tp.name+'|'+tp.supplier))continue;
+        if(getBrand(tp.name,tp.supplier,tp.row))continue;
+        pool.push({idx:-1-pool.length,qty:0,perKg:tp.netWeight,name:tp.name,isNew:true,product:tp,sup:hx?'海翔':'兴明发'});
+      }
+    }
+    return pool;
+  };
+  const solve=(pool,diff)=>{
+    if(diff===0||pool.length===0)return null;
+    let best=null;
+    if(N===0){
+      for(const n of[2,3,4,5,6,7,9,pool.length]){
+        const r=findBestPlan(pool,diff,n);
+        if(r&&(!best
+          ||r.err<best.err-1e-9
+          ||(Math.abs(r.err-best.err)<=1e-9&&r.used<best.used)
+          ||(Math.abs(r.err-best.err)<=1e-9&&r.used===best.used&&r.maxD<best.maxD-1e-9)))best=r;
+      }
+    }else{
+      best=findBestPlan(pool,diff,N);
+    }
+    if((!best||best.plan.length===0)&&pool.length>0){
+      const g=findBestPlan(pool,diff,pool.length);
+      if(g&&g.plan.length>0)best=g;
+    }
+    return best&&best.plan.length>0?best:null;
+  };
+  // 差额：未勾海翔=整车差额由兴明发池消化；勾海翔=两池各自差额、各自方向独立
+  let diffXmf=0,diffHx=0,warnHx='',valSingle=0;
+  if(!inclHX){
+    valSingle=parseFloat(document.getElementById('targetWeight').value);
+    if(!valSingle||valSingle<=0){alert('请输入有效数值');return;}
+    diffXmf = mode==='delta' ? (parseInt(document.getElementById('weightDir').value)||1)*valSingle : valSingle-curAll;
+  }else{
+    const vx=parseFloat(document.getElementById('valXmf').value);
+    const vh=parseFloat(document.getElementById('valHx').value);
+    if(mode==='delta'){
+      if(!vx||vx<=0){alert('请输入兴明发增减数值');return;}
+      diffXmf=(parseInt(document.getElementById('dirXmf').value)||1)*vx;
+      // 海翔留空/0 = 本次不调海翔
+      diffHx=vh>0?(parseInt(document.getElementById('dirHx').value)||1)*vh:0;
+    }else{
+      if(!vx||vx<=0){alert('请输入兴明发总净重');return;}
+      diffXmf=vx-curXmf;
+      // 海翔留空/0 = 本次不调海翔
+      diffHx=vh>0?vh-curHx:0;
     }
   }
-  if(xmf.length===0){
-    document.getElementById('weightSuggest').innerHTML=inclHX
-      ?'<span style="color:var(--rose)">当前车次没有兴明发或海翔的可调整产品</span>'
-      :'<span style="color:var(--rose)">当前没有兴明发产品可调整（可勾选「包含河南海翔」扩大范围）</span>';
+  const poolXmf=buildPool(false,diffXmf);
+  const bestX=solve(poolXmf,diffXmf);
+  let bestH=null;
+  if(inclHX&&diffHx!==0){
+    const poolHx=buildPool(true,diffHx);
+    bestH=solve(poolHx,diffHx);
+    if(!bestH)warnHx='⚠ 海翔差额未处理：海翔池无可调整产品'+(inclNew?'':'（可勾选「允许新增」）');
+  }
+  if(!bestX&&!bestH){
+    document.getElementById('weightSuggest').innerHTML='<span style="color:var(--rose)">无法找到可行调整方案'+(warnHx?'<br>'+warnHx:'')+'</span>';
     return;
   }
-  // 差额：delta模式=方向×输入值；total模式=输入总净重-当前
-  let diff;
-  if(mode==='delta'){
-    diff=val*(parseInt(document.getElementById('weightDir').value)||1);
-  }else{
-    diff=val-curNet;
-  }
-  
-  const N=parseInt(document.getElementById('adjCount').value)||0;
-  let best=null;
-  if(N===0){
-    // 自动模式：尝试 2,3,4,5,6,7,9 和全产品
-    // 已装产品始终参与（见 findBestPlan），N 只限制新增型号数
-    // 取舍顺序：误差最小 → 用得更少（新车次外型号能省则省）→ 单产品增量更分散
-    for(const n of[2,3,4,5,6,7,9,xmf.length]){
-      const r=findBestPlan(xmf,diff,n);
-      if(r&&(!best
-        ||r.err<best.err-1e-9
-        ||(Math.abs(r.err-best.err)<=1e-9&&r.used<best.used)
-        ||(Math.abs(r.err-best.err)<=1e-9&&r.used===best.used&&r.maxD<best.maxD-1e-9)))best=r;
-    }
-  }else{
-    best=findBestPlan(xmf,diff,N);
-  }
-  
-  // 兜底：贪心法
-  if(!best||best.plan.length===0){
-    const greedy=findBestPlan(xmf,diff,xmf.length);
-    if(greedy&&greedy.plan.length>0)best=greedy;
-  }
-  
-  if(!best||best.plan.length===0){document.getElementById('weightSuggest').innerHTML='<span style="color:var(--rose)">无法找到可行调整方案</span>';return;}
-  
-  const finalNet=curNet+best.plan.reduce((s,x)=>s+x.perKg*x.delta,0);
-  const diffTxt=mode==='delta'
-    ?`${diff>0?'增加':'减少'} <b>${Math.abs(diff).toFixed(1)}</b> kg`
-    :`目标: <b>${val.toFixed(1)}</b> kg`;
+  const planAll=[];
+  if(bestX)for(const x of bestX.plan)planAll.push(Object.assign({},x,{sup:'兴明发'}));
+  if(bestH)for(const x of bestH.plan)planAll.push(Object.assign({},x,{sup:'海翔'}));
+  const finalAll=curAll+planAll.reduce((s,x)=>s+x.perKg*x.delta,0);
+  const errTot=(bestX?bestX.err:0)+(bestH?bestH.err:0);
   let html=`<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;margin:8px 0;font-size:12px">`;
-  html+=`当前总净重: <b>${curNet.toFixed(1)}</b> kg ｜ ${diffTxt}<br>`;
-  html+=`调整后总净重: <b>${finalNet.toFixed(1)}</b> kg | 剩余误差: <b>${best.err.toFixed(2)}</b> kg | 使用 <b>${best.used}</b> 个产品${inclHX?'（含海翔）':''}</div>`;
+  html+=`当前总净重: <b>${curAll.toFixed(1)}</b> kg（兴明发 ${curXmf.toFixed(1)} / 海翔 ${curHx.toFixed(1)}）<br>`;
+  if(inclHX){
+    html+=`兴明发: <b style="color:${diffXmf>=0?'var(--green)':'var(--rose)'}">${diffXmf>0?'增加':'减少'} ${Math.abs(diffXmf).toFixed(1)}</b> kg ｜ 海翔: <b style="color:${diffHx>=0?'var(--green)':'var(--rose)'}">${diffHx>0?'增加':'减少'} ${Math.abs(diffHx).toFixed(1)}</b> kg<br>`;
+  }else{
+    html+=`${mode==='delta'?`${diffXmf>0?'增加':'减少'} <b>${Math.abs(diffXmf).toFixed(1)}</b> kg`:`目标总净重: <b>${valSingle.toFixed(1)}</b> kg`}<br>`;
+  }
+  html+=`调整后总净重: <b>${finalAll.toFixed(1)}</b> kg | 剩余误差: <b>${errTot.toFixed(2)}</b> kg</div>`;
   html+=`<div style="font-size:12px;color:var(--text-sec);margin:4px 0">建议调整:</div>`;
-  for(const x of best.plan){
+  for(const x of planAll){
     html+=`<div style="padding:6px 10px;margin:3px 0;background:rgba(8,12,20,.5);border-radius:6px;font-size:12px">`+
       `${x.isNew?'<span style="color:var(--green);font-weight:700">🆕</span> ':''}`+
-      `<span style="font-weight:600">${x.name}</span> · ${x.perKg}kg/箱 · ${x.isNew?'0':'<b>'+x.oldQty+'</b>'}→<b style="color:${x.delta>0?'var(--green)':'var(--rose)'}">${x.oldQty+x.delta}</b> (+${x.delta}箱)</div>`;
+      `${x.sup==='海翔'?'<span style="color:var(--cyan);font-size:10px">[海翔]</span> ':''}`+
+      `<span style="font-weight:600">${x.name}</span> · ${x.perKg}kg/箱 · ${x.isNew?'0':'<b>'+x.oldQty+'</b>'}→<b style="color:${x.delta>0?'var(--green)':'var(--rose)'}">${x.oldQty+x.delta}</b> (${x.delta>0?'+':''}${x.delta}箱)</div>`;
   }
-  weightPlan={plan:best.plan,currentNet:curNet,targetNet:curNet+diff};
+  if(warnHx)html+=`<div style="color:var(--rose);font-size:11px;margin-top:4px">${warnHx}</div>`;
+  weightPlan={plan:planAll,currentNet:curAll,targetNet:finalAll};
   document.getElementById('weightSuggest').innerHTML=html;
   document.getElementById('btnApplyWeight').disabled=false;
 }
