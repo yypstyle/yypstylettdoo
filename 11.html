@@ -202,6 +202,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:#38bdf8}
   color:#8fdcff;border:1px dashed rgba(125,211,252,.32);background:transparent;
   transition:background .2s,border-color .2s;display:flex;align-items:center;
 }
+.tabs-clear{
+  flex:0 0 auto;padding:7px 12px;border-radius:var(--pill);
+  font-size:15px;line-height:1;cursor:pointer;font-family:var(--sans);
+  color:var(--rose);border:1px dashed rgba(251,113,133,.4);background:transparent;
+  transition:background .2s,border-color .2s;display:flex;align-items:center;
+}
+.tabs-clear:hover{border-style:solid;background:rgba(251,113,133,.08)}
 .tabs-add:hover{border-color:#8fdcff;background:rgba(56,189,248,.12)}
 .tabs-ren{
   background:rgba(3,9,20,.5);border:1px solid rgba(56,189,248,.5);border-radius:8px;
@@ -960,6 +967,8 @@ const ALIAS = {
   '10寸三格碟':'10"甘蔗圓碟','10寸3格碟':'10"甘蔗圓碟','10寸甘蔗三格碟':'10"甘蔗圓碟',
   'HISY1200黑碗':'Y1200碗','HISY1200':'Y1200碗',
   '12白':'H12白碗','16白':'H16白碗','30白':'H30白碗',
+  // 2026-09-29 用户拍板：3012透碟 替 28MM內格（工作台侧另配数量减半规则）
+  '3012透碟（1000裝）':'28MM內格','3012透碟(1000裝)':'28MM內格','3012透碟':'28MM內格','3012透明碟':'28MM內格',
   '12x197三层散':'6*197 三層紙飲管',
   '12PP碗':'H12碗','12PP':'H12碗','16PP碗':'H16碗','16PP':'H16碗',
   '24PP碗':'H24碗','24PP':'H24碗','30PP碗':'H30碗','30PP':'H30碗',
@@ -1145,16 +1154,20 @@ const CUSTOMERS = [
 ];
 
 /* ===== 多车次Tab管理 ===== */
-let tabs=[],currentTabIdx=0;
+let tabs=[],currentTabIdx=0,carStateLoaded=false;
 function initCarTabs(){
   const saved=localStorage.getItem('v61car_tabs');
   if(saved){try{tabs=JSON.parse(saved)}catch(e){tabs=[]}}
   if(tabs.length===0){tabs.push({name:'车次 A',st:'new',txt:'',carNo:'',carTrip:0,cust:'',m:[],u:[],e:[],manual:[],img:''})}
   for(const t of tabs){t.m=t.m||[];t.u=t.u||[];t.e=t.e||[];t.manual=t.manual||[];t.carNo=t.carNo||'';t.carTrip=t.carTrip||0;t.cust=t.cust||'';t.txt=t.txt||'';t.img=t.img||'';if(!t.st)t.st='new'}
-  saveCarTabs();renderCarTabs();
+  // 恢复上次激活的车次序号（越界回退 0），并把该次数据还原到界面
+  const si=parseInt(localStorage.getItem('v61car_idx'));
+  currentTabIdx=(si>=0&&si<tabs.length)?si:0;
+  saveCarTabs();renderCarTabs();loadCarState();
 }
-function saveCarTabs(){try{localStorage.setItem('v61car_tabs',JSON.stringify(tabs))}catch(e){}}
+function saveCarTabs(){try{localStorage.setItem('v61car_tabs',JSON.stringify(tabs));localStorage.setItem('v61car_idx',String(currentTabIdx))}catch(e){}}
 function saveCarState(){
+  if(!carStateLoaded)return; // 界面状态未还原前，禁止空白覆盖已存车次
   const t=tabs[currentTabIdx];if(!t)return;
   t.txt=document.getElementById('inputText').value.trim();
   t.carNo=carNo;t.carTrip=carTrip;t.cust=carNoCustomer;
@@ -1167,6 +1180,7 @@ function saveCarState(){
   saveCarTabs();renderCarTabs();
 }
 function loadCarState(){
+  carStateLoaded=true; // 界面状态已还原，允许保存
   const t=tabs[currentTabIdx];if(!t)return;
   carNo=t.carNo||'';carTrip=t.carTrip||0;carNoCustomer=t.cust||'';
   matchedItems=t.m||[];unmatchedItems=t.u||[];excludedItems=t.e||[];
@@ -1186,7 +1200,7 @@ function loadCarState(){
 }
 function switchCarTab(idx){
   if(idx===currentTabIdx)return;
-  saveCarState();currentTabIdx=idx;loadCarState();renderCarTabs();
+  saveCarState();currentTabIdx=idx;saveCarTabs();loadCarState();renderCarTabs();
 }
 function addCarTab(){
   tabs.push({name:'\u8F66\u6B21 '+(tabs.length<26?String.fromCharCode(65+tabs.length):String(tabs.length+1)),st:'new',txt:'',carNo:'',carTrip:0,cust:'',m:[],u:[],e:[],manual:[],img:''});
@@ -1205,6 +1219,18 @@ function renameCarTab(idx,el){
   inp.onblur=function(){tabs[idx].name=inp.value.trim()||old;saveCarTabs();renderCarTabs();};
   inp.onkeydown=function(e){if(e.key==='Enter'){tabs[idx].name=inp.value.trim()||old;saveCarTabs();renderCarTabs();}};
 }
+function clearAllCarTabs(){
+  // 仅剩一个空车次时无需清空
+  if(tabs.length===1&&tabs[0].st!=='edit'&&!(tabs[0].m&&tabs[0].m.length>0)&&!tabs[0].txt){
+    alert('当前没有需要清空的车次');return;
+  }
+  if(!confirm('⚠ 确定清空所有车次？\n将只保留一个空车次，所有已录入数据将删除，不可恢复！'))return;
+  tabs=[{name:'车次 A',st:'new',txt:'',carNo:'',carTrip:0,cust:'',m:[],u:[],e:[],manual:[],img:''}];
+  currentTabIdx=0;
+  saveCarTabs();loadCarState();renderCarTabs();
+  document.getElementById('resultCard').style.display='none';
+  document.getElementById('diffPanel').style.display='none';
+}
 function renderCarTabs(){ // TODO: 增量更新优化，当前Tab数量<10，重建开销可忽略
   const bar=document.getElementById('carTabsBar');let h='';
   for(let i=0;i<tabs.length;i++){
@@ -1215,6 +1241,7 @@ function renderCarTabs(){ // TODO: 增量更新优化，当前Tab数量<10，重
       '<span class="tabs-del" onclick="delCarTab('+i+',event)">×</span></button>';
   }
   h+='<button class="tabs-add" onclick="addCarTab()">+</button>';
+  h+='<button class="tabs-clear" onclick="clearAllCarTabs()" title="清空所有车次">🗑</button>';
   bar.innerHTML=h;
 }
 /* ===== Tab管理结束 ===== */
