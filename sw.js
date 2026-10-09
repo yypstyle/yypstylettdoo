@@ -1,10 +1,20 @@
 /* ===== 报关初稿生成器 v6.5 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.5-v83-deepglass';
+const CACHE_NAME = 'customs-v6.5-v91-pink';
 
 const PRECACHE_URLS = [
   './11.html',
   './template.xlsx',
   './manifest.json',
+  './assets/粉色像素素龙主姿态.png',
+  './assets/粉色像素素龙放大镜.png',
+  './assets/粉色像素素龙耳麦.png',
+  './assets/粉色像素素龙欢呼.png',
+  './assets/粉色像素素龙文件卷.png',
+  './assets/粉色像素素龙探头像.png',
+  './assets/粉色像素港口横幅.png',
+  './assets/粉色像素数字徽章.png',
+  './assets/粉色像素状态点.png',
+  './assets/粉色像素小装饰.png',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
 ];
