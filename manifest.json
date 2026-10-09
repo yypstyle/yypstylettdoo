@@ -10,7 +10,7 @@
   ],
   "orientation": "portrait",
   "background_color": "#fff3ec",
-  "theme_color": "#ff6f9c",
+  "theme_color": "#fcd7ea",
   "launch_handler": {
     "client_mode": "auto"
   },

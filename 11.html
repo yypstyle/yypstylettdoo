@@ -707,7 +707,7 @@ label{font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px;font-
 textarea::placeholder,input::placeholder{color:#a59098!important;font-style:normal;font-weight:500}
 </style>
 	<link rel="manifest" href="manifest.json">
-	<meta name="theme-color" content="#ff6f9c">
+	<meta name="theme-color" content="#fcd7ea">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<meta name="apple-mobile-web-app-title" content="报关生成器">
@@ -850,7 +850,7 @@ textarea::placeholder,input::placeholder{color:#a59098!important;font-style:norm
     </div><div class="edit-row">
       <span class="name">3. <span style="color:var(--text-tertiary);font-weight:normal">H盖</span> → 盒蓋</span>
       <span class="qty"><input type="number" value="50" min="1" onchange="updateQty(2,this.value)"></span>
-      <span class="supplier"><select style="font-size:12px;font-family:var(--mono);background:rgba(4,10,22,.5);color:var(--text);border:1px solid rgba(255,255,255,.16);border-radius:7px;padding:4px 6px;max-width:100%" onchange="switchSupplier(2,this.value)"><option value="深圳興明發">深圳興明發</option><option value="河南海翔新材料科技有限公司" selected="">河南海翔新材料科技有限公司</option></select></span>
+      <span class="supplier"><select style="font-size:12px;font-family:var(--mono);background:#fff8f3;color:var(--text);border:2px solid #ff9bbb;border-radius:8px;padding:4px 6px;max-width:100%;font-weight:600" onchange="switchSupplier(2,this.value)"><option value="深圳興明發">深圳興明發</option><option value="河南海翔新材料科技有限公司" selected="">河南海翔新材料科技有限公司</option></select></span>
       <span class="status"><span class="status-dot status-dot-ok"></span></span>
       <span class="del-btn" onclick="delRow(2)">×</span>
     </div><div class="edit-row">
@@ -1136,7 +1136,7 @@ textarea::placeholder,input::placeholder{color:#a59098!important;font-style:norm
     <h3>🧠 学习别名</h3>
     <div style="font-size:12px;color:var(--text-tri);margin:8px 0">装车单写 "<b id="learnRawLabel"></b>"，对应模板哪个产品？</div>
     <input type="text" id="learnInput" placeholder="搜产品名..." style="width:100%;padding:10px;border:2px solid #ff9bbb;border-radius:8px;background:#fff8f3;color:var(--text);font-size:14px;margin:4px 0" autocomplete="off" oninput="filterLearnList()" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmLearn();}" onblur="setTimeout(()=&gt;{const d=document.getElementById('learnDropdown');if(d&amp;&amp;!d.matches(':hover'))d.style.display='none';},150)">
-    <div id="learnDropdown" style="display: none; max-height: 200px; overflow-y: auto; border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 6px; background: rgba(8, 12, 20, 0.95); margin: 2px 0px;"><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('EP28S')">EP28S</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('6828黑')">6828黑</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('6828')">6828</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('DG一28')">DG一28</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('28MM內格')">28MM內格</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('280 8安花紙杯')">280 8安花紙杯</div></div>
+    <div id="learnDropdown" style="display: none; max-height: 200px; overflow-y: auto; border: 2px solid #ff9bbb; border-radius: 8px; background: #fff8f3; margin: 2px 0px; box-shadow: 0 4px 10px -6px rgba(255,140,180,.5);"><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('EP28S')">EP28S</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('6828黑')">6828黑</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('6828')">6828</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('DG一28')">DG一28</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('28MM內格')">28MM內格</div><div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('280 8安花紙杯')">280 8安花紙杯</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-primary" onclick="confirmLearn()">匹配产品</button>
       <button class="btn btn-sm" style="background:var(--rose-light);color:var(--rose);border:1px solid rgba(244,63,94,.3)" onclick="learnExclude()">🚫 不报关</button>
@@ -2259,7 +2259,7 @@ function renderSupplier(m,idx){
     const sel=a.supplier===m.product.supplier?' selected':'';
     opts+=`<option value="${escHtml(a.supplier)}"${sel}>${escHtml(supplierShort(a.supplier))}</option>`;
   }
-  return `<select style="font-size:12px;font-family:var(--mono);background:rgba(4,10,22,.5);color:var(--text);border:1px solid rgba(255,255,255,.16);border-radius:7px;padding:4px 6px;max-width:100%" onchange="switchSupplier(${idx},this.value)">${opts}</select>`;
+  return `<select style="font-size:12px;font-family:var(--mono);background:#fff8f3;color:var(--text);border:2px solid #ff9bbb;border-radius:8px;padding:4px 6px;max-width:100%;font-weight:600" onchange="switchSupplier(${idx},this.value)">${opts}</select>`;
 }
 
 function updateQty(idx,v){if(matchedItems[idx])matchedItems[idx].qty=Math.max(1,parseInt(v)||1);updateStats(matchedItems);}
@@ -2342,7 +2342,7 @@ function filterLearnList(){
   const items=templateProducts.filter(p=>!q||p.name.toLowerCase().includes(q));
   if(items.length===0){dd.style.display='none';return;}
   dd.style.display='block';
-  dd.innerHTML=items.slice(0,30).map(p=>`<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03);-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('${escHtml(p.name)}')">${escHtml(p.name)}</div>`).join('');
+  dd.innerHTML=items.slice(0,30).map(p=>`<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('${escHtml(p.name)}')">${escHtml(p.name)}</div>`).join('');
 }
 function selectLearnItem(name){
   document.getElementById('learnInput').value=name;
