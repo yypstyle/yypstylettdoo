@@ -1331,6 +1331,8 @@ const ALIAS = {
   // ---- 快乐系列→1000美黑代替报关 ----
   '快快樂1000美式':'1000美黑','快樂1000美式':'1000美黑',
   '快快樂1200美式':'1000美黑','快樂1200美式':'1000美黑',
+  '快快乐1200美透':'1000美透','快快樂1200美透':'1000美透','快樂1200美透':'1000美透',
+  '快快乐1200美式':'1000美黑','快快乐1000美式':'1000美黑','快快乐1000碗':'1000美黑',
   '快快樂1000碗':'1000美黑','快樂1000碗':'1000美黑',
   // ---- T系列（茂盈）→28MM內格代替报关 ----
   'T34':'28MM內格','T36':'28MM內格','T38':'28MM內格','T316':'28MM內格','茂盈':'1000美黑',
@@ -2318,6 +2320,13 @@ function loadLearnedAliases(){
   for(const z of ['300樽','600樽','750樽','330樽']){
     const i=learnedExcludes.indexOf(z);
     if(i>=0){learnedExcludes.splice(i,1);try{const s2=localStorage.getItem('v63exclude');const d2=s2?JSON.parse(s2):[];const j=d2.indexOf(z);if(j>=0){d2.splice(j,1);localStorage.setItem('v63exclude',JSON.stringify(d2));}}catch(e){}}
+  }
+  // 修正历史误学：快快乐/快快樂 1200美透 曾被学到 快快樂1200美式（应为 1000美透）
+  for(const k of ['快快乐1200美透','快快樂1200美透','快樂1200美透']){
+    if(learnedAliases[k]&&learnedAliases[k]!=='1000美透'){
+      delete learnedAliases[k];
+      try{const s2=localStorage.getItem('v63learned');const d2=s2?JSON.parse(s2):{};if(k in d2){delete d2[k];localStorage.setItem('v63learned',JSON.stringify(d2));}}catch(e){}
+    }
   }
   // V8 修正历史误学：'500ml' 曾被学到 580紙盒（应为 H500）；長方750紙盒 带空格变体以 BUILTIN 为准
   for(const k of Object.keys(learnedAliases)){
