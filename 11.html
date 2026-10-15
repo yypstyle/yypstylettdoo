@@ -432,7 +432,7 @@ body{
 }
 body::before{
   content:'';position:fixed;top:0;left:0;right:0;height:120px;z-index:-1;pointer-events:none;
-  background-image:url("assets/粉色像素港口横幅.png");
+  background-image:url("粉色像素港口横幅.png");
   background-size:cover;background-position:center top;background-repeat:no-repeat;opacity:.95;
   -webkit-mask-image:linear-gradient(180deg,#000 60%,transparent 100%);
           mask-image:linear-gradient(180deg,#000 60%,transparent 100%);
@@ -445,7 +445,7 @@ h1{
 }
 h1::before{
   content:'';display:block;flex:none;width:36px;height:36px;border-radius:8px;
-  background:url("assets/粉色像素素龙放大镜.png") center/contain no-repeat,#ffe2eb;
+  background:url("粉色像素素龙放大镜.png") center/contain no-repeat,#ffe2eb;
   border:2px solid #ff9bbb;box-shadow:var(--px-shadow);
 }
 .card{
@@ -473,12 +473,12 @@ h1::before{
 }
 .card:has(#templateFile)::before{
   content:'';position:absolute;right:8px;top:8px;width:48px;height:48px;
-  background:url("assets/粉色像素素龙文件卷.png") center/contain no-repeat;
+  background:url("粉色像素素龙文件卷.png") center/contain no-repeat;
   pointer-events:none;opacity:.95;z-index:2;
 }
 .card:has(.tab-bar)::before{
   content:'';position:absolute;right:8px;top:8px;width:48px;height:48px;
-  background:url("assets/粉色像素素龙耳麦.png") center/contain no-repeat;
+  background:url("粉色像素素龙耳麦.png") center/contain no-repeat;
   pointer-events:none;opacity:.95;z-index:2;
 }
 textarea,input,select{
@@ -592,7 +592,7 @@ label{font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px;font-
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 4px;position:relative}
 .stats::after{
   content:'';position:absolute;right:8px;top:-2px;width:48px;height:48px;
-  background:url("assets/粉色像素素龙欢呼.png") center/contain no-repeat;pointer-events:none;
+  background:url("粉色像素素龙欢呼.png") center/contain no-repeat;pointer-events:none;
 }
 .stat{
   position:relative;overflow:hidden;text-align:center;
@@ -646,7 +646,7 @@ label{font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px;font-
 #learnCard>div:first-child::before{
   content:'';position:absolute;left:6px;top:50%;transform:translateY(-50%);
   width:34px;height:34px;border-radius:50%;
-  background:url("assets/粉色像素素龙探头像.png") center/cover no-repeat,#ffe2eb;
+  background:url("粉色像素素龙探头像.png") center/cover no-repeat,#ffe2eb;
   border:2px solid #ff9bbb;
 }
 #learnCard>div:first-child>span:first-of-type{margin-left:42px}
@@ -2107,11 +2107,14 @@ function matchProduct(inputName,rawLine){
   const hsIn=/^HS/i.test(c);
   if(hsIn)pool=pool.filter(p=>/^HS/i.test(p.name));
   if(c.length>=3){p=pool.find(p=>p.name.toLowerCase().includes(lc));if(p)return p;}
-  // 包含匹配加 ASCII 边界校验：产品代号不允许切穿数字串（HS999透碗 不会被 HS9 劫持）
+  // 包含匹配组合规则：锚定在头/尾 + 非锚定侧不得直连字母数字（防切穿）
+  // ✓ 黑色美星700碗→美星700碗   ✗ 韓盛500方合透明→500方   ✗ HS999透碗→HS9   ✗ HS1250碗→1250碗
   p=pool.find(p=>{const n=p.name.toLowerCase();const i2=lc.indexOf(n);if(i2<0)return false;
-    const bL=i2===0||!/[a-z0-9]/i.test(lc[i2-1]);
-    const bR=i2+n.length>=lc.length||!/[a-z0-9]/i.test(lc[i2+n.length]);
-    return bL&&bR;});if(p)return p; // 修饰词场景（黑色美星700碗：美 前非字母数字→放行）
+    const atStart=i2===0,atEnd=i2+n.length===lc.length;
+    if(atStart&&atEnd)return true;
+    if(atStart)return !/[a-z0-9]/i.test(lc[n.length]);
+    if(atEnd)return !/[a-z0-9]/i.test(lc[i2-1]);
+    return false;});if(p)return p; // 修饰词场景（黑色美星700碗：美 前非字母数字→放行）
   const c2=c.replace(/[\s\-_—–]/g,'').toLowerCase();p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'').toLowerCase()===c2);if(p)return p;
   if(ALIAS[c]&&!deletedBuiltins.has(c)){const ac=ALIAS[c].replace(/[\s\-_—–]/g,'');p=pool.find(p=>p.name.replace(/[\s\-_—–]/g,'')===ac);if(p)return p;}
   const c3=c.replace(/[（(][^）)]*[）)]/g,'').replace(/[\s\-_—–]/g,'').toLowerCase();
