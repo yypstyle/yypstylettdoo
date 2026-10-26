@@ -2927,8 +2927,10 @@ async function shareExcel(){
       // 安卓 Chrome 偶发节流：上次面板刚关闭会短暂拒绝，等 1.2 秒自动重试一次
       await new Promise(r=>setTimeout(r,1200));
       try{await navigator.share({files:[file]});return;}catch(e2){if(e2&&e2.name==='AbortError')return;}
-      alert('分享被系统连续拒绝。建议：稍等几秒再点一次；或直接用已下载的 Excel 从文件管理器发送');
-      return;
+      // 系统限制（掉后台后禁止弹界面）：自动把 Excel 重新下载一遍，确保文件在手
+      const u=URL.createObjectURL(lastExportBlob);const l=document.createElement('a');
+      l.href=u;l.download=lastExportName;l.click();setTimeout(()=>URL.revokeObjectURL(u),3000);
+      alert('系统限制：掉后台后首次弹分享会被拦截。\n办法1：回手机桌面，重新点图标打开本程序，再点「发微信」。\n办法2：Excel 已重新下载，直接在文件管理器或微信里发送');return;
     }
     alert('分享取消或失败: '+(e.message||e.name||e));
   }
