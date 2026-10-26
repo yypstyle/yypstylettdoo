@@ -2930,7 +2930,7 @@ async function shareExcel(){
       // 系统限制（掉后台后禁止弹界面）：自动把 Excel 重新下载一遍，确保文件在手
       const u=URL.createObjectURL(lastExportBlob);const l=document.createElement('a');
       l.href=u;l.download=lastExportName;l.click();setTimeout(()=>URL.revokeObjectURL(u),3000);
-      alert('系统限制：掉后台后首次弹分享会被拦截。\n办法1：回手机桌面，重新点图标打开本程序，再点「发微信」。\n办法2：Excel 已重新下载，直接在文件管理器或微信里发送');return;
+      alert('系统限制：分享面板被拦截。\n办法1：从手机桌面重新点图标打开再试。\n办法2：仍不行→长按桌面图标删除本应用，用 Chrome 打开本网址后重新「添加到主屏幕」。\n办法3：Excel 已重新下载，可从文件管理器发送。[诊断] '+(e&&e.name||'?'));return;
     }
     alert('分享取消或失败: '+(e.message||e.name||e));
   }
