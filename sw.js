@@ -1,5 +1,5 @@
 /* ===== 报关初稿生成器 v6.5 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.5-v100-pink';
+const CACHE_NAME = 'customs-v6.5-v102-pink';
 
 const PRECACHE_URLS = [
   './11.html',
@@ -42,6 +42,83 @@ self.addEventListener('activate', event => {
       })
     )).then(() => self.clients.claim())
   );
+  // 兼容 Background Sync 的浏览器：激活时注册一次补传（有积压才需要）
+  if (self.registration && self.registration.sync) {
+    self.registration.sync.register('flush-uploads').catch(() => {});
+  }
+});
+
+/* ----- Background Sync：连上家里 WiFi 时系统唤醒补传积压文件 ----- */
+const IDB_NAME = 'bgz-uploads', IDB_STORE = 'pending';
+
+function swIdbGet(key) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore(IDB_STORE, { keyPath: 'name' }); };
+    r.onsuccess = () => {
+      const db = r.result;
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const rq = tx.objectStore(IDB_STORE).get(key);
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+function swIdbDel(key) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore(IDB_STORE, { keyPath: 'name' }); };
+    r.onsuccess = () => {
+      const db = r.result;
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+
+async function swFlushPending() {
+  const rec = await swIdbGet('__meta__');
+  const base = rec && rec.pcUrl ? String(rec.pcUrl).replace(/\/+$/, '') : '';
+  if (!base) return;
+  const all = await new Promise((res, rej) => {
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore(IDB_STORE, { keyPath: 'name' }); };
+    r.onsuccess = () => {
+      const db = r.result;
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const rq = tx.objectStore(IDB_STORE).getAll();
+      rq.onsuccess = () => { res({ items: rq.result || [], db }); };
+      rq.onerror = () => rej(rq.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+  for (const item of all.items) {
+    if (item.name === '__meta__') continue;
+    try {
+      const r = await fetch(base + '/upload?name=' + encodeURIComponent(item.name), { method: 'POST', body: item.blob });
+      if (r.ok) {
+        await swIdbDel(item.name);
+        const cl = await self.clients.matchAll();
+        cl.forEach(c => c.postMessage({ type: 'flushed', name: item.name }));
+      }
+    } catch (e) { /* 下一个网络可用时机再试 */ }
+  }
+}
+
+self.addEventListener('sync', event => {
+  if (event.tag === 'flush-uploads') {
+    event.waitUntil(swFlushPending().catch(e => console.warn('[SW] 补传失败:', e)));
+  }
+});
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'flush-uploads') {
+    event.waitUntil(swFlushPending().catch(e => console.warn('[SW] 补传失败:', e)));
+  }
 });
 
 /* ----- fetch: Stale-While-Revalidate + Share Target ----- */
