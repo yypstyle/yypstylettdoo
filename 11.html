@@ -686,11 +686,11 @@ label{font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px;font-
 
 /* ===== 验收修复包：弹窗子元素/对比度/悬浮按钮 ===== */
 /* 弹窗内部元素统一为粉色像素 */
-#weightModal .modal h3,#carNoModal .modal h3,#learnModal .modal h3,#addModal .modal h3{color:#c83d6c;font-weight:800;font-size:15px;border-bottom:2px solid #ff9bbb;padding-bottom:10px}
-#weightModal button,#carNoModal button,#learnModal button,#addModal button{border:2px solid #c83d6c!important;border-radius:8px!important;background:linear-gradient(180deg,#ff9bbb 0%,#ff6f9c 100%)!important;color:#fff!important;font-weight:700!important;text-shadow:1px 1px 0 #c83d6c;box-shadow:2px 2px 0 #ff9bbb!important;padding:10px 14px!important}
-#weightModal button:active,#carNoModal button:active,#learnModal button:active,#addModal button:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #ff9bbb!important}
-#weightModal input,#carNoModal input,#learnModal input,#addModal input,#weightModal select{background:#fff8f3!important;border:2px solid #ff9bbb!important;color:var(--text)!important;border-radius:8px!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)}
-#weightModal input:focus,#carNoModal input:focus,#learnModal input:focus,#addModal input:focus{border-color:#ff6f9c!important;box-shadow:0 0 0 3px rgba(255,111,156,.18)}
+#weightModal .modal h3,#carNoModal .modal h3,#learnModal .modal h3,#addModal .modal h3,#checkCarModal .modal h3,#ccPreviewModal .modal h3{color:#c83d6c;font-weight:800;font-size:15px;border-bottom:2px solid #ff9bbb;padding-bottom:10px}
+#weightModal button,#carNoModal button,#learnModal button,#addModal button,#checkCarModal button,#ccPreviewModal button{border:2px solid #c83d6c!important;border-radius:8px!important;background:linear-gradient(180deg,#ff9bbb 0%,#ff6f9c 100%)!important;color:#fff!important;font-weight:700!important;text-shadow:1px 1px 0 #c83d6c;box-shadow:2px 2px 0 #ff9bbb!important;padding:10px 14px!important}
+#weightModal button:active,#carNoModal button:active,#learnModal button:active,#addModal button:active,#checkCarModal button:active,#ccPreviewModal button:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #ff9bbb!important}
+#weightModal input,#carNoModal input,#learnModal input,#addModal input,#weightModal select,#checkCarModal input{background:#fff8f3!important;border:2px solid #ff9bbb!important;color:var(--text)!important;border-radius:8px!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)}
+#weightModal input:focus,#carNoModal input:focus,#learnModal input:focus,#addModal input:focus,#checkCarModal input:focus{border-color:#ff6f9c!important;box-shadow:0 0 0 3px rgba(255,111,156,.18)}
 #weightModal .hint,#carNoModal .hint{color:var(--text-sec);font-size:12.5px}
 /* 弹窗低对比灰字清晰化（保留建议行 绿增/红减 的色彩区分） */
 #curXmfTxt,#curHxTxt{color:#c83d6c!important;font-weight:800!important}
@@ -953,7 +953,7 @@ textarea::placeholder,input::placeholder{color:#a59098!important;font-style:norm
   <div class="btn-row" style="margin-top:10px">
     <button class="btn btn-primary" onclick="genWechat()">微信消息</button>
     <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
-    <button class="btn btn-primary" onclick="shareExcel()" id="btnWechatShare" style="display:none">📤 发微信</button>
+    <button class="btn btn-primary" onclick="openCheckCar()" id="btnCheckCar">🚚 查车</button>
     <span id="pcSyncStatus" style="display:none;font-size:11px;font-weight:700;align-self:center"></span>
     <button class="btn btn-ghost" onclick="matchWeight()">🔄 匹配磅单</button>
     <button class="btn btn-ghost" onclick="clearMatch()">清空</button>
@@ -1135,6 +1135,36 @@ textarea::placeholder,input::placeholder{color:#a59098!important;font-style:norm
     <div class="btn-row">
       <button class="btn btn-sm btn-primary" onclick="confirmCarNo()">确认</button>
       <button class="btn btn-sm btn-ghost" onclick="closeCarNoModal()">取消</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="checkCarModal" style="display:none">
+  <div class="modal">
+    <h3>🚚 查车 — 生成查车图</h3>
+    <div style="font-size:12px;color:var(--text-tri);margin:8px 0">图片总毛重合计将与报关单一致。校准规则与电脑端数据整合完全相同：差额 60%/40% 分摊到毛重最大的两个兴明发产品（只改图片数字，不改数量/Excel）。</div>
+    <div id="ccInfo" style="font-size:13px;margin:8px 0"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin:8px 0">
+      <span style="white-space:nowrap;font-size:13px;font-weight:600">报关单总毛重</span>
+      <input type="number" id="ccTargetGross" step="0.1" placeholder="填报关单上的毛重(千克)" class="w-inp" style="flex:1" oninput="calcCheckCar()" onkeydown="if(event.key==='Enter')calcCheckCar()">
+      <span style="white-space:nowrap;font-size:13px;color:var(--text-sec)">kg</span>
+    </div>
+    <div id="ccSuggest" style="margin:8px 0;font-size:12.5px"></div>
+    <div style="font-size:11px;color:var(--text-tri);margin-top:6px">⚠ 导出 Excel 后若手动改过数量，请先在 App 里同步修改，否则查车图与电脑端整合会对不上。</div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-primary" onclick="genCheckCarImage()" id="btnGenImg" disabled>生成图片</button>
+      <button class="btn btn-sm btn-ghost" onclick="closeCheckCar()">取消</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="ccPreviewModal" style="display:none">
+  <div class="modal" style="max-width:94vw">
+    <h3>查车图预览</h3>
+    <div style="text-align:center;margin:8px 0"><img id="ccPreviewImg" style="max-width:100%;max-height:52vh;border:1px solid #eee;border-radius:6px;background:#fff"></div>
+    <div id="ccPreviewInfo" style="font-size:12px;color:var(--text-sec);text-align:center;margin:4px 0"></div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-sm btn-primary" onclick="saveCheckCarImage()">⬇ 保存到本地</button>
+      <button class="btn btn-sm btn-secondary" onclick="shareCheckCarImage()">📤 发微信</button>
+      <button class="btn btn-sm btn-ghost" onclick="closeCheckCarPreview()">返回</button>
     </div>
   </div>
 </div>
@@ -2925,27 +2955,211 @@ function _doGenWechat(car,sorted){
   showResult(msg,'微信消息（点击复制）');
 }
 
-let lastExportBlob=null,lastExportName='';
-function showShareBtn(){const b=document.getElementById('btnWechatShare');if(b)b.style.display='';}
-async function shareExcel(){
-  if(!lastExportBlob){alert('请先点「导出数据」生成 Excel');return;}
-  const file=new File([lastExportBlob],lastExportName,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  if(!(navigator.canShare&&navigator.canShare({files:[file]}))){alert('当前浏览器不支持直接分享文件，请下载后从文件管理器发送');return;}
-  try{await navigator.share({files:[file]});}
-  catch(e){
-    if(e&&e.name==='AbortError')return; // 用户自己关闭面板，不算错误
-    if(e&&(e.name==='PermissionDeniedError'||/permission/i.test(e.message||''))){
-      // 安卓 Chrome 偶发节流：上次面板刚关闭会短暂拒绝，等 1.2 秒自动重试一次
-      await new Promise(r=>setTimeout(r,1200));
-      try{await navigator.share({files:[file]});return;}catch(e2){if(e2&&e2.name==='AbortError')return;}
-      // 系统限制（掉后台后禁止弹界面）：自动把 Excel 重新下载一遍，确保文件在手
-      const u=URL.createObjectURL(lastExportBlob);const l=document.createElement('a');
-      l.href=u;l.download=lastExportName;l.click();setTimeout(()=>URL.revokeObjectURL(u),3000);
-      alert('系统限制：分享面板被拦截。\n办法1：从手机桌面重新点图标打开再试。\n办法2：仍不行→长按桌面图标删除本应用，用 Chrome 打开本网址后重新「添加到主屏幕」。\n办法3：Excel 已重新下载，可从文件管理器发送。[诊断] '+(e&&e.name||'?'));return;
+const CC_XMF = s => !!(s && (s.indexOf('興明發') >= 0 || s.indexOf('兴明发') >= 0));
+function getGroupIndexMap(){
+  const groups={};
+  for(const m of matchedItems){
+    let origin=ORIGIN[m.product.supplier]||'';
+    if(!origin){
+      for(const [sup,ori] of Object.entries(ORIGIN)){
+        if(sup.includes(m.product.supplier)||m.product.supplier.includes(sup)){origin=ori;break;}
+      }
     }
-    alert('分享取消或失败: '+(e.message||e.name||e));
+    const brand=getBrand(m.product.name,m.product.supplier,m.product.row);
+    const key=`${origin}|${m.product.variety}|${brand||''}`;
+    if(!groups[key])groups[key]={origin,variety:m.product.variety,brand,items:[],minRow:Infinity};
+    groups[key].items.push(m);groups[key].minRow=Math.min(groups[key].minRow,m.product.row);
   }
+  const sorted=Object.values(groups).sort((a,b)=>a.minRow-b.minRow);
+  const map=new Map();
+  sorted.forEach(function(g,i){g.items.forEach(function(m){map.set(m,i+1);});});
+  return map;
 }
+function calcCheckBaseline(){
+  const rows=matchedItems.map(function(m,i){
+    const nw=m.product.netWeight||0;
+    const gross=nw*m.qty+m.qty/2;
+    return {idx:i,name:m.product.name,supplier:m.product.supplier,variety:m.product.variety,qty:m.qty,
+            net:nw*m.qty,gross:gross,adj:0,finalGross:gross,row:m.product.row};
+  });
+  const total=rows.reduce(function(s,r){return s+r.gross;},0);
+  return {rows:rows,total:total};
+}
+function round1(x){return Math.round(x*10)/10;}
+function solveCheckAdjust(target){
+  const base=calcCheckBaseline();
+  const tn=Number(target);
+  if(!isFinite(tn)||tn<=0){
+    return {ok:true,adjust:false,rows:base.rows,before:base.total,after:base.total,diff:0,applied:false,adjusted:[],msg:'未填目标毛重，按当前数据出图'};
+  }
+  const diff=round1(tn-base.total);
+  const r1={ok:true,adjust:true,rows:base.rows,before:base.total,after:base.total+ (Math.abs(diff)<=0.5?0:0),diff:diff,applied:false,adjusted:[]};
+  if(Math.abs(diff)<=0.5){
+    r1.msg='差额 '+diff.toFixed(1)+' kg 在 ±0.5 容差内，无需校准';
+    return r1;
+  }
+  const cands=base.rows.filter(function(r){return CC_XMF(r.supplier);})
+    .sort(function(a,b){if(b.gross!==a.gross)return b.gross-a.gross;return a.row-b.row;});
+  if(cands.length===0){
+    r1.msg='未找到兴明发产品，无法自动校准毛重';
+    return r1;
+  }
+  let adj1=0,adj2=0,useN=0;
+  if(cands.length===1){
+    adj1=round1(diff);adj2=0;useN=1;
+  }else{
+    adj1=round1(diff*0.6);adj2=round1(diff-adj1);useN=2;
+  }
+  cands[0].adj=adj1;cands[0].finalGross=cands[0].gross+adj1;
+  if(useN===2){cands[1].adj=adj2;cands[1].finalGross=cands[1].gross+adj2;}
+  r1.applied=true;r1.after=base.total+adj1+adj2;
+  r1.adjusted=[{name:cands[0].name,adj:adj1}];
+  if(useN===2)r1.adjusted.push({name:cands[1].name,adj:adj2});
+  r1.msg='校准 ' + r1.adjusted.map(a=>a.name+' '+(a.adj>=0?'+':'')+a.adj.toFixed(1)+'kg').join(' ， ');
+  return r1;
+}
+async function openCheckCar(){
+  if(!matchedItems.length){alert('没有匹配数据，先完成匹配');return;}
+  const base=calcCheckBaseline();
+  document.getElementById('ccInfo').innerHTML='当前整车总毛重: <b>'+base.total.toFixed(2)+' kg</b>（'+matchedItems.length+' 个产品）';
+  document.getElementById('ccTargetGross').value='';
+  document.getElementById('ccSuggest').innerHTML='';
+  document.getElementById('btnGenImg').disabled=true;
+  window._ccPlan=null;
+  document.getElementById('checkCarModal').style.display='flex';
+}
+function calcCheckCar(){
+  const tv=document.getElementById('ccTargetGross').value;
+  if(!tv){document.getElementById('ccSuggest').innerHTML='';document.getElementById('btnGenImg').disabled=true;window._ccPlan=null;return;}
+  const plan=solveCheckAdjust(tv);
+  window._ccPlan=plan;
+  const el=document.getElementById('ccSuggest');
+  document.getElementById('btnGenImg').disabled=false;
+  let h='差额: <b>'+(plan.diff>=0?'+':'')+plan.diff.toFixed(1)+' kg</b>（原 '+plan.before.toFixed(2)+' → 目标 '+Number(tv).toFixed(1)+'）';
+  if(plan.applied){
+    h+='<br>校准: '+plan.adjusted.map(a=>escHtml(a.name)+' <b>'+(a.adj>=0?'+':'')+a.adj.toFixed(1)+'kg</b>').join(' ， ');
+  }else{
+    h+='<br>'+escHtml(plan.msg||'');
+  }
+  h+='<br>校准后合计: <b>'+plan.after.toFixed(2)+' kg</b>';
+  el.innerHTML=h;
+}
+function ccFmt(x){
+  if(typeof x!=='number'||!isFinite(x))return '';
+  let s2=x.toFixed(2);
+  if(s2.indexOf('.')>=0)s2=s2.replace(/0+$/,'').replace(/\.$/,'');
+  return s2;
+}
+function drawCheckCarTable(plan){
+  const gmap=getGroupIndexMap();
+  const rows=plan.rows.map(function(r){
+    const grp=(gmap.get(matchedItems[r.idx])||'');
+    return {seq:grp,name:r.name,variety:r.variety,qty:r.qty,net:r.net,gross:r.finalGross,amount:(r.row?null:0)};
+  });
+  // amount 用 (price+1)*qty，从 matchedItems 取 price
+  rows.forEach(function(r,i){r.amount=((matchedItems[r.idx].product.price||0)+1)*matchedItems[r.idx].qty;});
+  const cols=[
+    {k:'seq',t:'序号',w:70,align:'center'},
+    {k:'name',t:'产品名称',w:170,align:'left'},
+    {k:'variety',t:'品種',w:150,align:'left'},
+    {k:'qty',t:'数量',w:80,align:'right'},
+    {k:'net',t:'总净重',w:100,align:'right'},
+    {k:'gross',t:'总毛重',w:100,align:'right'},
+    {k:'amount',t:'出口金额（RMB）',w:170,align:'right'}
+  ];
+  const fs=15,lh=34,pad=10,headerH=40;
+  const dpr=Math.max(2,window.devicePixelRatio||1)*2;
+  const tableW=cols.reduce((s,c)=>s+c.w,0)+cols.length+1;
+  const tableH=headerH+rows.length*lh+rows.length+1;
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.ceil(tableW*dpr);canvas.height=Math.ceil(tableH*dpr);
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,tableW,tableH);
+  ctx.font='700 '+fs+'px sans-serif';
+  // 表头
+  ctx.fillStyle='#f2f2f2';ctx.fillRect(0,0,tableW,headerH);
+  ctx.fillStyle='#000';
+  let x=0;
+  for(const c of cols){
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(c.t,x+c.w/2,headerH/2);
+    x+=c.w+1;
+  }
+  // 数据行
+  ctx.font=fs+'px sans-serif';
+  rows.forEach(function(r,i){
+    const y=headerH+(i+1)*lh+i;
+    if(i%2===1){ctx.fillStyle='#fafafa';ctx.fillRect(0,y,tableW,lh);}
+    ctx.fillStyle='#000';
+    let x2=0;
+    for(const c of cols){
+      const raw=r[c.k];
+      const txt=(typeof raw==='number')?ccFmt(raw):String(raw==null?'':raw);
+      if(c.align==='right'){ctx.textAlign='right';ctx.fillText(txt,x2+c.w-pad, y+lh/2);}
+      else if(c.align==='center'){ctx.textAlign='center';ctx.fillText(txt,x2+c.w/2,y+lh/2);}
+      else{ctx.textAlign='left';ctx.fillText(txt,x2+pad,y+lh/2);}
+      x2+=c.w+1;
+    }
+  });
+  // 网格线
+  ctx.strokeStyle='#000';ctx.lineWidth=1;
+  let gx=0;
+  for(let i=0;i<=cols.length;i++){
+    ctx.beginPath();ctx.moveTo(gx+.5,0);ctx.lineTo(gx+.5,tableH);ctx.stroke();
+    if(i<cols.length)gx+=cols[i].w+1;
+  }
+  for(let i=0;i<=rows.length+1;i++){
+    const gy=(i===0)?0:headerH+(i)*lh+(i-1);
+    ctx.beginPath();ctx.moveTo(0,gy+.5);ctx.lineTo(tableW,gy+.5);ctx.stroke();
+  }
+  return canvas;
+}
+function genCheckCarImage(){
+  if(!window._ccPlan){alert('先填报关单总毛重');return;}
+  let canvas;
+  try{canvas=drawCheckCarTable(window._ccPlan);}
+  catch(e){alert('生成失败: '+e.message);return;}
+  canvas.toBlob(function(blob){
+    if(!blob){alert('图片生成失败');return;}
+    window._ccBlob=blob;
+    window._ccName=checkCarFileName();
+    document.getElementById('ccPreviewImg').src=URL.createObjectURL(blob);
+    document.getElementById('ccPreviewInfo').textContent='文件名: '+window._ccName+'（'+Math.round(blob.size/1024)+' KB）';
+    document.getElementById('checkCarModal').style.display='none';
+    document.getElementById('ccPreviewModal').style.display='flex';
+  },'image/png');
+}
+function checkCarFileName(){
+  const n=new Date();
+  const mm=String(n.getMonth()+1).padStart(2,'0'),dd=String(n.getDate()).padStart(2,'0');
+  return '查车-'+mm+dd+(carNo?('-'+carNo):'')+'.png';
+}
+function saveCheckCarImage(){
+  if(!window._ccBlob)return;
+  const u=URL.createObjectURL(window._ccBlob);
+  const l=document.createElement('a');
+  l.href=u;l.download=window._ccName;l.click();
+  setTimeout(function(){URL.revokeObjectURL(u);},3000);
+}
+async function shareCheckCarImage(){
+  if(!window._ccBlob)return;
+  const file=new File([window._ccBlob],window._ccName,{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file]});return;}
+    catch(e){
+      if(e&&e.name==='AbortError')return;
+      if(e&&(e.name==='PermissionDeniedError'||/permission/i.test(e.message||''))){
+        await new Promise(r=>setTimeout(r,1200));
+        try{await navigator.share({files:[file]});return;}catch(e2){if(e2&&e2.name==='AbortError')return;}
+      }
+    }
+  }
+  saveCheckCarImage();
+  alert('分享不可用，图片已下载到本地，可从文件管理器发送微信。');
+}
+function closeCheckCar(){document.getElementById('checkCarModal').style.display='none';}
+function closeCheckCarPreview(){document.getElementById('ccPreviewModal').style.display='none';document.getElementById('checkCarModal').style.display='flex';}
 async function autoUploadToPC(blob,name){
   const base=(localStorage.getItem('pc_upload_url')||'').replace(/\/+$/,'');
   if(!base)return;
@@ -3165,7 +3379,6 @@ async function exportData(){
       // 补回动态数组声明：否则 FILTER 退化成普通数组公式，打开只显示模板旧缓存
       out=await restoreDynamicArray(out);
       const b=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-      lastExportBlob=b;lastExportName=fileName;showShareBtn();
       if(typeof autoUploadToPC==='function')autoUploadToPC(b,fileName);
       const u=URL.createObjectURL(b);const l=document.createElement('a');
       l.href=u;l.download=fileName;l.click();URL.revokeObjectURL(u);
@@ -3188,7 +3401,6 @@ async function exportData(){
       // 同理补回动态数组声明（SheetJS 也会丢 metadata.xml / cm 属性）
       out2=await restoreDynamicArray(out2);
       const b2=new Blob([out2],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-      lastExportBlob=b2;lastExportName=fileName;showShareBtn();
       if(typeof autoUploadToPC==='function')autoUploadToPC(b2,fileName);
       const u2=URL.createObjectURL(b2);const l2=document.createElement('a');
       l2.href=u2;l2.download=fileName;l2.click();URL.revokeObjectURL(u2);
