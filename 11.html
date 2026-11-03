@@ -3053,11 +3053,11 @@ function ccFmt(x){
 function drawCheckCarTable(plan){
   const gmap=getGroupIndexMap();
   const rows=plan.rows.map(function(r){
-    const grp=(gmap.get(matchedItems[r.idx])||'');
-    return {seq:grp,name:r.name,variety:r.variety,qty:r.qty,net:r.net,gross:r.finalGross,amount:(r.row?null:0)};
+    const m=matchedItems[r.idx];
+    const grp=m?(gmap.get(m)||''):'';
+    return {seq:grp,name:r.name,variety:r.variety,qty:r.qty,net:r.net,gross:r.finalGross,
+            amount:m?(((m.product.price||0)+1)*m.qty):0};
   });
-  // amount 用 (price+1)*qty，从 matchedItems 取 price
-  rows.forEach(function(r,i){r.amount=((matchedItems[r.idx].product.price||0)+1)*matchedItems[r.idx].qty;});
   const cols=[
     {k:'seq',t:'序号',w:70,align:'center'},
     {k:'name',t:'产品名称',w:170,align:'left'},
@@ -3067,36 +3067,35 @@ function drawCheckCarTable(plan){
     {k:'gross',t:'总毛重',w:100,align:'right'},
     {k:'amount',t:'出口金额（RMB）',w:170,align:'right'}
   ];
-  const fs=15,lh=34,pad=10,headerH=40;
+  const fs=15,lh=34,gap=1,pad=10,headerH=40,rowH=lh+gap;
   const dpr=Math.max(2,window.devicePixelRatio||1)*2;
-  const tableW=cols.reduce((s,c)=>s+c.w,0)+cols.length+1;
-  const tableH=headerH+rows.length*lh+rows.length+1;
+  const tableW=cols.reduce((s2,c)=>s2+c.w,0)+cols.length+1;
+  const tableH=headerH+rows.length*rowH+1;
   const canvas=document.createElement('canvas');
   canvas.width=Math.ceil(tableW*dpr);canvas.height=Math.ceil(tableH*dpr);
   const ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);
   ctx.fillStyle='#ffffff';ctx.fillRect(0,0,tableW,tableH);
-  ctx.font='700 '+fs+'px sans-serif';
   // 表头
   ctx.fillStyle='#f2f2f2';ctx.fillRect(0,0,tableW,headerH);
-  ctx.fillStyle='#000';
+  ctx.fillStyle='#000';ctx.font='700 '+fs+'px sans-serif';
   let x=0;
   for(const c of cols){
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(c.t,x+c.w/2,headerH/2);
     x+=c.w+1;
   }
-  // 数据行
+  // 数据行（第 i 行顶部 = headerH + i*rowH，与网格线共用同一坐标系）
   ctx.font=fs+'px sans-serif';
   rows.forEach(function(r,i){
-    const y=headerH+(i+1)*lh+i;
+    const y=headerH+i*rowH;
     if(i%2===1){ctx.fillStyle='#fafafa';ctx.fillRect(0,y,tableW,lh);}
     ctx.fillStyle='#000';
     let x2=0;
     for(const c of cols){
       const raw=r[c.k];
       const txt=(typeof raw==='number')?ccFmt(raw):String(raw==null?'':raw);
-      if(c.align==='right'){ctx.textAlign='right';ctx.fillText(txt,x2+c.w-pad, y+lh/2);}
+      if(c.align==='right'){ctx.textAlign='right';ctx.fillText(txt,x2+c.w-pad,y+lh/2);}
       else if(c.align==='center'){ctx.textAlign='center';ctx.fillText(txt,x2+c.w/2,y+lh/2);}
       else{ctx.textAlign='left';ctx.fillText(txt,x2+pad,y+lh/2);}
       x2+=c.w+1;
@@ -3110,8 +3109,8 @@ function drawCheckCarTable(plan){
     if(i<cols.length)gx+=cols[i].w+1;
   }
   for(let i=0;i<=rows.length+1;i++){
-    const gy=(i===0)?0:headerH+(i)*lh+(i-1);
-    ctx.beginPath();ctx.moveTo(0,gy+.5);ctx.lineTo(tableW,gy+.5);ctx.stroke();
+    const gy=(i===0)?0.5:headerH+(i-1)*rowH+0.5;
+    ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(tableW,gy);ctx.stroke();
   }
   return canvas;
 }
