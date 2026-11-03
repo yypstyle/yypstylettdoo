@@ -2995,6 +2995,12 @@ window.addEventListener('load',()=>setTimeout(()=>flushPendingUploads(),2500));
 
 async function exportData(){
   if(matchedItems.length===0){alert('没有数据');return;}
+  // 未匹配条目护栏：未匹配的产品不会写入模板 J 列，导出的表会缺行（2026-10-31 1030-21-1 案例复盘）
+  if(unmatchedItems.length>0){
+    const all=unmatchedItems.map(u=>'· '+(u.text||u.name||''));
+    const show=all.slice(0,12).join('\n')+(all.length>12?('\n… 等共 '+all.length+' 条'):'');
+    if(!confirm('⚠ 有 '+unmatchedItems.length+' 条未匹配，导出的表格将缺少这些产品：\n'+show+'\n\n点「确定」继续导出（缺行），点「取消」返回处理。'))return;
+  }
   const saved=localStorage.getItem('savedTemplate');
   if(!saved){alert('模板数据丢失，请重新上传');return;}
   try{
@@ -3012,6 +3018,9 @@ async function exportData(){
     if(typeof ExcelJS!=='undefined'){
       const wb=new ExcelJS.Workbook();
       await wb.xlsx.load(bytes.buffer);
+      // 强制 Excel/WPS 打开时全量重算：ExcelJS 不算公式，缓存值是模板旧数据，
+      // 不设这个 FILTER/报关明细表会显示旧车数据（2026-10-31 1030-21-1 案例复盘）
+      wb.calcProperties.fullCalcOnLoad=true;
       const ws=wb.getWorksheet('工作表2');
       if(!ws){alert('找不到工作表2');return;}
       for(const p of templateProducts){
@@ -3039,6 +3048,9 @@ async function exportData(){
         XLSX.utils.sheet_add_aoa(ws2,[[qty]],{origin:XLSX.utils.encode_cell({c:9,r:parseInt(row)-1})});
       }
       wb2.Sheets['工作表2']=ws2;
+      // SheetJS 写出不支持 calcPr（实测 Workbook.CalcPr 会被丢弃），
+      // 改剥全部公式缓存值：Excel 打开发现公式无缓存 → 被迫全量重算
+      try{for(const sn of Object.keys(wb2.Sheets)){const sx=wb2.Sheets[sn];for(const ad of Object.keys(sx)){if(ad[0]==='!')continue;const cc=sx[ad];if(cc&&cc.f&&'v' in cc)delete cc.v;}}}catch(e){}
       const out2=XLSX.write(wb2,{bookType:'xlsx',type:'array'});
       const b2=new Blob([out2],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       lastExportBlob=b2;lastExportName=fileName;showShareBtn();
