@@ -3092,6 +3092,75 @@ async function exportData(){
       for(const [row,qty] of Object.entries(rowQty)){
         ws.getCell(parseInt(row),10).value=qty;
       }
+      // ===== 把 FILTER 结果算出来写进缓存 =====
+      // 手机微信/网页预览不重算公式，只显示文件里存的缓存值。模板只存了 1 行旧缓存，
+      // 所以这里算出本车真实的匹配行，连同 I/K/L/M/N 一起写成值。
+      // A1 保留 FILTER 公式并把 ref 扩到真实行数——Excel 原生就是这么存动态数组的，
+      // 因此 Excel 打开仍重算、手动改工作表2 依然联动。
+      try{
+        const ws2r=wb.getWorksheet('工作表2'),w3=wb.getWorksheet('工作表3'),wmd=wb.getWorksheet('报关明细表');
+        if(ws2r&&w3){
+          const num=function(v){if(v&&typeof v==='object'){if('result' in v)v=v.result;else return NaN;}var n=Number(v);return isFinite(n)?n:NaN;};
+          const pick=[];
+          for(let r=6;r<=216;r++){
+            const row=ws2r.getRow(r);
+            const jq=num(row.getCell(10).value);
+            if(!(jq>0))continue;
+            const f=num(row.getCell(6).value),g=num(row.getCell(7).value),h=num(row.getCell(8).value);
+            const I=g*(1+h),K=jq*f,LL=K+jq/2,M=jq*I,N=M+jq;
+            pick.push({A:row.getCell(2).value,B:row.getCell(3).value,C:row.getCell(4).value,
+                       D:num(row.getCell(5).value),E:f,F:g,G:h,H:I,I:jq,J:K,K:LL,L:M,M:N});
+          }
+          const keys=['A','B','C','D','E','F','G','H','I','J','K','L','M'];
+          // 清掉超出范围的旧缓存行（模板遗留）
+          for(let r=pick.length+1;r<=Math.max(pick.length+1,30);r++){
+            for(let c=1;c<=13;c++){const cl=w3.getCell(r,c);if(cl.value!==null&&cl.value!==undefined)cl.value=null;}
+          }
+          for(let i=0;i<pick.length;i++){
+            const d=pick[i],rr=i+1;
+            for(let c=0;c<keys.length;c++){
+              const cell=w3.getCell(rr,c+1);
+              const val=d[keys[c]];
+              if(rr===1&&c===0){
+                cell.value={formula:'_xlfn._xlws.FILTER(工作表2!B6:N216,工作表2!N6:N216>0,"")',
+                            result:val,ref:'A1:M'+pick.length,shareType:'array'};
+              }else{
+                cell.value=(val===undefined?null:val);
+              }
+            }
+          }
+          console.log('[Spill] 工作表3 缓存 '+pick.length+' 行');
+          // 报关明细表：按每个单元格的公式自动推导来源列，把结果写成缓存
+          // （公式本体保留，Excel 打开仍重算；手机预览则直接看到数值）
+          if(wmd){
+            const rowOf=function(d,letter){return d?d[letter]:undefined;};
+            for(let i2=0;i2<Math.max(pick.length,26);i2++){
+              const dr=i2+3;
+              const d=pick[i2];
+              for(let cn=1;cn<=16;cn++){
+                const cell=wmd.getCell(dr,cn);
+                const old=cell.value;
+                let fml=null;
+                if(old&&typeof old==='object'&&old.formula)fml=old.formula;
+                if(!fml){
+                  if(i2>=pick.length){cell.value=null;}
+                  continue;
+                }
+                // 解析 工作表3!X 引用
+                const mm=/工作表3!([A-Z]+)\d+/.exec(fml);
+                if(!mm){
+                  cell.value={formula:fml,result:(i2<pick.length?undefined:'')};
+                  if(i2>=pick.length)cell.value={formula:fml,result:''};
+                  continue;
+                }
+                const val=(i2<pick.length)?rowOf(d,mm[1]):'';
+                cell.value={formula:fml,result:(val===undefined?'':val)};
+              }
+            }
+            console.log('[Spill] 报关明细表 缓存 '+pick.length+' 行');
+          }
+        }
+      }catch(e){console.warn('[Spill] 缓存写入失败（公式仍在）:',e);}
       let out=await wb.xlsx.writeBuffer();
       // 补回动态数组声明：否则 FILTER 退化成普通数组公式，打开只显示模板旧缓存
       out=await restoreDynamicArray(out);
