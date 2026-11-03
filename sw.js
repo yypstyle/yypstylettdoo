@@ -1,5 +1,5 @@
 /* ===== 报关初稿生成器 v6.5 — Service Worker ===== */
-const CACHE_NAME = 'customs-v6.5-v103-pink';
+const CACHE_NAME = 'customs-v6.5-v104-pink';
 
 const PRECACHE_URLS = [
   './11.html',
@@ -16,7 +16,8 @@ const PRECACHE_URLS = [
   './assets/粉色像素状态点.png',
   './assets/粉色像素小装饰.png',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
-  'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
+  'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'
 ];
 
 /* ----- install: 预缓存核心文件 ----- */
