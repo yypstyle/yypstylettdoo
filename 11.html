@@ -3052,9 +3052,17 @@ function ccFmt(x){
 }
 function drawCheckCarTable(plan){
   const gmap=getGroupIndexMap();
+  // 按组号从小到大原地排序（与微信消息分组顺序一致）；同组内按模板行号排
+  // （校准量已在 solveCheckAdjust 里落到行对象上，此处重排不影响数值）
+  plan.rows.sort(function(a,b){
+    const ma=matchedItems[a.idx],mb=matchedItems[b.idx];
+    const sa=ma?(gmap.get(ma)||0):0,sb=mb?(gmap.get(mb)||0):0;
+    const ra=ma?ma.product.row:0,rb=mb?mb.product.row:0;
+    return (sa-sb)||(ra-rb);
+  });
   const rows=plan.rows.map(function(r){
     const m=matchedItems[r.idx];
-    const grp=m?(gmap.get(m)||''):'';
+    const grp=m?(gmap.get(m)||0):0;
     return {seq:grp,name:r.name,variety:r.variety,qty:r.qty,net:r.net,gross:r.finalGross,
             amount:m?(((m.product.price||0)+1)*m.qty):0};
   });
