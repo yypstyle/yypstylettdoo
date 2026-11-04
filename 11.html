@@ -3342,7 +3342,7 @@ async function exportData(){
           }
           const keys=['A','B','C','D','E','F','G','H','I','J','K','L','M'];
           // 清掉超出范围的旧缓存行（模板遗留）
-          for(let r=pick.length+1;r<=Math.max(pick.length+1,30);r++){
+          for(let r=pick.length+1;r<=Math.max(pick.length+1,61);r++){
             for(let c=1;c<=13;c++){const cl=w3.getCell(r,c);if(cl.value!==null&&cl.value!==undefined)cl.value=null;}
           }
           for(let i=0;i<pick.length;i++){
@@ -3363,7 +3363,7 @@ async function exportData(){
           // （公式本体保留，Excel 打开仍重算；手机预览则直接看到数值）
           if(wmd){
             const rowOf=function(d,letter){return d?d[letter]:undefined;};
-            for(let i2=0;i2<Math.max(pick.length,26);i2++){
+            for(let i2=0;i2<Math.max(pick.length,60);i2++){
               const dr=i2+3;
               const d=pick[i2];
               for(let cn=1;cn<=16;cn++){
