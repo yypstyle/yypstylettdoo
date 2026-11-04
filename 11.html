@@ -2148,7 +2148,14 @@ function matchProduct(inputName,rawLine){
   // 前缀族保护：HS(韩盛)开头的输入只允许命中 HS 开头的产品，避免错落到 H 系列
   const hsIn=/^HS/i.test(c);
   if(hsIn)pool=pool.filter(p=>/^HS/i.test(p.name));
-  if(c.length>=3){p=pool.find(p=>p.name.toLowerCase().includes(lc));if(p)return p;}
+  // 宽松包含升级为「词边界包含」：命中位必须是整个词（前后都不能直连字母数字）
+  // ✗ K750 嵌在 WDK750 中间 → 拒绝   ✓ K750底/750K 这类头尾贴合仍放行
+  if(c.length>=3){p=pool.find(p=>{const n2=p.name.toLowerCase();const i2=n2.indexOf(lc);if(i2<0)return false;
+    const atS=i2===0,atE=i2+lc.length===n2.length;
+    if(atS&&atE)return true;
+    if(atS&&!/[a-z0-9]/i.test(n2[i2+lc.length]))return true;
+    if(atE&&!/[a-z0-9]/i.test(n2[i2-1]))return true;
+    return false;});if(p)return p;}
   // 包含匹配组合规则：锚定在头/尾 + 非锚定侧不得直连字母数字（防切穿）
   // ✓ 黑色美星700碗→美星700碗   ✗ 韓盛500方合透明→500方   ✗ HS999透碗→HS9   ✗ HS1250碗→1250碗
   p=pool.find(p=>{const n=p.name.toLowerCase();const i2=lc.indexOf(n);if(i2<0)return false;
@@ -2171,8 +2178,9 @@ function isNotCustomsName(n){
   if(n.includes('不报'))return true; // 模板标记"（不报）"的产品不报关
   if(n.includes('L999'))return true;
   // 裸内部编号（整个字符串就是「字母+数字」，不含中文/碗盒杯蓋等产品词）才视为不报关
-  // 例：X04 / X23 / CH23 / HK 11 / L999 → 不报关；X1000美式透明盒 / L4蓋 → 是产品，不能拦
-  if(/^(?:X|CH|HK|L|G|C|M|N)[-]?\s?\d+[\s.。]*$/i.test(n))return true;
+  // 例：X04 / X23 / CH23 / HK 11 / L999 / K750 → 不报关；X1000美式透明盒 / L4蓋 → 是产品，不能拦
+  // K 是 2026-11-04 新增：K750 曾被 2151 行宽松 includes 劫持到模板 WDK750
+  if(/^(?:X|CH|HK|L|G|C|M|N|K)[-]?\s?\d+[\s.。]*$/i.test(n))return true;
   return false;
 }
 
