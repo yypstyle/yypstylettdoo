@@ -1398,6 +1398,8 @@ const ALIAS = {
   // 美星系列缩写
   'MX1000':'美星1000盒','MX750':'美星750盒','MX450':'美星450碗','Mx800':'Mx800',
   'MX三格':'美星三格盒','MX四格':'美星四格',
+  // 美星380盒（2026-11-09）：模板无此产品，按用户指定代替报关到美星750盒；MX380盒 为装车单写法
+  '美星380盒':'美星750盒','美星380':'美星750盒','MX380盒':'美星750盒','MX380':'美星750盒',
   // 中央化学缩写
   'CTP115':'中央CTP115盒','CTP115蓋':'中央CTP115蓋','L1红黑':'L1紅黑三格','L1红黑三格':'L1紅黑三格',
   // 韩盛HS系列缩写
@@ -2370,7 +2372,8 @@ function loadLearnedAliases(){
   learnedExcludes=[...BUILTIN_EXCLUDES];
   try{const s=localStorage.getItem('v63exclude');if(s){const d=JSON.parse(s);for(const x of d)if(!learnedExcludes.includes(x))learnedExcludes.push(x);}}catch(e){}
   // V8: 300/600/750樽已是辰润正式报关产品，清除历史学习排除记录；V10: 330樽同
-  for(const z of ['300樽','600樽','750樽','330樽']){
+  // V11.1: MX380盒（=美星380盒 装车单写法）误标不报关，清除历史学习排除记录
+  for(const z of ['300樽','600樽','750樽','330樽','MX380盒']){
     const i=learnedExcludes.indexOf(z);
     if(i>=0){learnedExcludes.splice(i,1);try{const s2=localStorage.getItem('v63exclude');const d2=s2?JSON.parse(s2):[];const j=d2.indexOf(z);if(j>=0){d2.splice(j,1);localStorage.setItem('v63exclude',JSON.stringify(d2));}}catch(e){}}
   }
@@ -2440,6 +2443,7 @@ function learnExclude(){
   try{localStorage.setItem('v63exclude',JSON.stringify(learnedExcludes))}catch(e){}
   alert(`已将 "${pendingLearnName}" 标记为不报关\n下次自动跳过`);
   closeLearn();
+  refreshLearnUI(); // 立即刷新别名面板，否则新排除要等下次操作才显示
   // 重新解析
   const text=document.getElementById('inputText').value.trim();
   if(text){doClean(text);}
