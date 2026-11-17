@@ -1464,13 +1464,13 @@ const ORIGIN = {
 };
 function getBrand(n,supplier,row){
   if(!n)return null;
-  // 中央化學全表有品牌（不限行号，模板加行不踩线）
+  // 中央化學/美星 全表有品牌（不限行号，模板加行不踩线）
   if(supplier&&(supplier.includes('中央化學')||supplier.includes('中央化学')))return '中央';
+  if(supplier&&supplier.includes('美星'))return '美星';
   if(row!==undefined && row>=4 && row<=78){
     if(supplier){
       if(supplier.includes('韓盛')||supplier.includes('韩盛'))return '韓盛';
       if(supplier.includes('中央化學')||supplier.includes('中央化学'))return '中央';
-      if(supplier.includes('美星'))return '美星';
       if(supplier.includes('長江')||supplier.includes('长江'))return 'LR';
       if(supplier.includes('茂盈'))return null;
       if(supplier.includes('海翔')||supplier.includes('兆盈'))return null;
@@ -2934,7 +2934,6 @@ function _doGenWechat(car,sorted){
   let msg=`${car}  興協出口  深圳湾\n\n`,seq=1;
   for(const g of sorted){
     let brandTxt=g.brand||'没有';
-    if(brandTxt==='美星')brandTxt='没有';
     const tQty=g.items.reduce((s,i)=>s+i.qty,0);
     const tNet=g.items.reduce((s,i)=>s+(i.product.netWeight||0)*i.qty,0);
     const tGross=g.items.reduce((s,i)=>s+grossOf(i.product,i.qty),0);
