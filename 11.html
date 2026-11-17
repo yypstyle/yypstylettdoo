@@ -1437,8 +1437,8 @@ const SPEC_MAP = {
   '紙餐具：碟':['7','10'],
   '紙餐具：飯盒蓋':['10×2'],
   '紙餐具：飯盒':['10×2'],
-  '紙吸管':['6×197'],
-  '紙餐具：中更':['125'],
+  '紙吸管':['19.7'],
+  '紙餐具：中更':['12.5'],
   '塑料碗':['4','8'],
 };
 const COUNT_MAP={1:'一種',2:'两種'};
@@ -2942,19 +2942,10 @@ function _doGenWechat(car,sorted){
     const itemCnt=uniqueRows.size;
     const cntStrVal=cntStr(itemCnt);
     let specTxt='';
-    if(g.variety==='紙吸管'){
-      const specSet=new Set();
-      for(const it of g.items){
-        const m2=it.product.name.match(/(\d+)\*(\d+)/);
-        if(m2)specSet.add(`${m2[1]}×${m2[2]}`);
-      }
-      specTxt=[...specSet].join('、');
-    }else{
-      const specs=SPEC_MAP[g.variety]||[];
-      if(itemCnt===1&&specs.length>=1)specTxt=specs[0];
-      else if(itemCnt>=2&&specs.length>=2)specTxt=`${specs[0]}、${specs[1]}`;
-      else specTxt=specs[0]||'';
-    }
+    const specs=SPEC_MAP[g.variety]||[];
+    if(itemCnt===1&&specs.length>=1)specTxt=specs[0];
+    else if(itemCnt>=2&&specs.length>=2)specTxt=`${specs[0]}、${specs[1]}`;
+    else specTxt=specs[0]||'';
     msg+=`${seq}）${g.variety}（${cntStrVal}）${g.origin}\n`;
     msg+=`牌子：${brandTxt}\n箱數：${tQty}\n毛重量：${tGross.toFixed(2)}\n淨重量：${tNet.toFixed(2)}\n`;
     msg+=`规格：${specTxt}\n¥${tPrice.toFixed(2)}\n\n`;
