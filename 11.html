@@ -2101,7 +2101,8 @@ function parseLine(s){
   return null;
 }
 function matchProduct(inputName,rawLine){
-  let c=inputName.trim();if(!c)return null;
+  // 装车单「产品 ×数量」经 cleanText→parseLine 后乘号会粘在名字尾部（"美式 1000 ×"），先剥掉
+  let c=inputName.trim().replace(/\s*[×xX*]\s*$/,'').trim();if(!c)return null;
   let p;
   // -1. X×空格归一化为*
   const cNorm=c.replace(/\s*[Xx×]\s*/g,'*');
