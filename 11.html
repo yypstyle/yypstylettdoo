@@ -1420,7 +1420,11 @@ const ALIAS = {
   '1216蓋':'H12-16碗蓋','1216盖':'H12-16碗蓋',
   '1500透碗':'H1250碗',
   '750盒':'H750','750 盒':'H750',
+  // 2026-11-23 装车单实际写法：美星旧写法→改名后新名；韩盛段省略HS前缀；LS55 小写变体
+  'Ls55 150':'LS一55','MX1500碗':'圆1500','MX750盒':'方750','MX1000盒':'方1000','MC1000盒':'方1000','MX800碗':'圆800','H1500透':'H1250碗','1000長盒':'HS1000方盒','1200透碗':'Y1200碗','內格':'HS內格','142高蓋':'HS142蓋',
 };
+// 只按整个名称匹配的别名：「內格」是通用词（28 內格 / 4.0 內格 里也是它），不能当分词命中
+const ALIAS_WHOLE_ONLY=['內格'];
 (function(){const seen={};for(const k of Object.keys(ALIAS)){if(seen[k])console.warn('ALIAS重复定义:',k,'→',seen[k],'和',ALIAS[k]);seen[k]=ALIAS[k];}})();
 const SPEC_MAP = {
   '塑料餐具：飯盒':['10×2','12×6','15×2'],
@@ -2100,6 +2104,14 @@ function parseLine(s){
   if(m){let q=parseFloat(m[2]);if(m[3]==='板')q*=30;else if(m[3]==='半板')q*=15;return {name:m[1].trim(),qty:Math.round(q)};}
   return null;
 }
+// 学习别名 → 模板产品。同名多厂家的产品按学习时点选的厂家取（learnedAliasSuppliers）；未点选或该厂家已不在模板里则取首个
+function learnedProduct(key){
+  const t=learnedAliases[key];
+  if(t===undefined)return undefined;
+  const pin=learnedAliasSuppliers[key];
+  const hit=(pin&&pin.name===t)?templateProducts.find(p=>p.name===t&&p.supplier===pin.supplier):null;
+  return hit||templateProducts.find(p=>p.name===t);
+}
 function matchProduct(inputName,rawLine){
   // 装车单「产品 ×数量」经 cleanText→parseLine 后乘号会粘在名字尾部（"美式 1000 ×"），先剥掉
   let c=inputName.trim().replace(/\s*[×xX*]\s*$/,'').trim();if(!c)return null;
@@ -2109,19 +2121,19 @@ function matchProduct(inputName,rawLine){
   // 0. 学习别名（全词匹配——先查原始行文本，再查提纯名）
   if(rawLine){
     const raw=rawLine.trim();
-    if(learnedAliases[raw]){p=templateProducts.find(p=>p.name===learnedAliases[raw]);if(p)return p;}
+    if(learnedAliases[raw]){p=learnedProduct(raw);if(p)return p;}
     const rawNoQty=raw.replace(/\s*\d+(\.\d+)?\s*(箱|板|半板|件|个|隻|条|條|捆)?\s*$/,'').trim();
-    if(rawNoQty!==raw&&learnedAliases[rawNoQty]){p=templateProducts.find(p=>p.name===learnedAliases[rawNoQty]);if(p)return p;}
+    if(rawNoQty!==raw&&learnedAliases[rawNoQty]){p=learnedProduct(rawNoQty);if(p)return p;}
   }
-  if(learnedAliases[c]){p=templateProducts.find(p=>p.name===learnedAliases[c]);if(p)return p;}
+  if(learnedAliases[c]){p=learnedProduct(c);if(p)return p;}
   // 去空格紧凑查询（装车单"長方 750 紙盒"带空格→别名键"長方750紙盒"）
   const cCompact=c.replace(/\s+/g,'');
-  if(cCompact!==c&&learnedAliases[cCompact]){p=templateProducts.find(p=>p.name===learnedAliases[cCompact]);if(p)return p;}
-  if(cNorm!==c&&learnedAliases[cNorm]){p=templateProducts.find(p=>p.name===learnedAliases[cNorm]);if(p)return p;}
+  if(cCompact!==c&&learnedAliases[cCompact]){p=learnedProduct(cCompact);if(p)return p;}
+  if(cNorm!==c&&learnedAliases[cNorm]){p=learnedProduct(cNorm);if(p)return p;}
   // 0b. 学习别名逐词匹配（如"甘蔗中更 10箱"→词"甘蔗中更"命中）；
   //     输入去空格后本身就是模板产品名（如"12*197 三層紙飲管"）则跳过逐词，避免被"12*197"这类裸简称劫持
   const cSelf=templateProducts.find(p=>p.name.replace(/\s+/g,'')===cCompact);
-  if(!cSelf){for(const w of c.split(/\s+/)){if(learnedAliases[w]){p=templateProducts.find(p=>p.name===learnedAliases[w]);if(p)return p;}}}
+  if(!cSelf){for(const w of c.split(/\s+/)){if(learnedAliases[w]&&!ALIAS_WHOLE_ONLY.includes(w)){p=learnedProduct(w);if(p)return p;}}}
   // 1. ALIAS硬编码映射（优先于精确匹配，解决WDK等模板自有产品的重映射）
   if(ALIAS[c]&&!deletedBuiltins.has(c)){
     p=templateProducts.find(p=>p.name===ALIAS[c]);if(!p){
@@ -2145,12 +2157,12 @@ function matchProduct(inputName,rawLine){
   if(/^[Xx]/.test(c)&&c.length>1){
     const cx=c.replace(/^[Xx][-\s]?/,'');
     if(cx&&cx!==c){
-      if(learnedAliases[cx]){p=templateProducts.find(p=>p.name===learnedAliases[cx]);if(p)return p;}
+      if(learnedAliases[cx]){p=learnedProduct(cx);if(p)return p;}
       if(ALIAS[cx]&&!deletedBuiltins.has(cx)){p=templateProducts.find(p=>p.name===ALIAS[cx]);if(p)return p;}
     }
   }
   const words=c.split(/\s+/);
-  if(!cSelf){for(const w of words){if(ALIAS[w]&&!deletedBuiltins.has(w)){p=templateProducts.find(p=>p.name===ALIAS[w]);if(p)return p;}}}
+  if(!cSelf){for(const w of words){if(ALIAS[w]&&!deletedBuiltins.has(w)&&!ALIAS_WHOLE_ONLY.includes(w)){p=templateProducts.find(p=>p.name===ALIAS[w]);if(p)return p;}}}
   for(const w of words){if(/[Xx×]/.test(w)){const w2=w.replace(/[Xx×]/g,'*');if(ALIAS[w2]&&!deletedBuiltins.has(w2)){p=templateProducts.find(p=>p.name===ALIAS[w2]);if(p)return p;}}}
   if(c.endsWith('透')){const base=c.slice(0,-1);p=templateProducts.find(p=>p.name===base);if(p)return p;if(ALIAS[base]&&!deletedBuiltins.has(base)){p=templateProducts.find(p=>p.name===ALIAS[base]);if(p)return p;}p=templateProducts.find(p=>p.name.includes(base));if(p)return p;}
   for(const sf of['白色','黑色','白','黑']){if(c.endsWith(sf)){const ba=c.slice(0,-sf.length);if(ALIAS[ba]&&!deletedBuiltins.has(ba)){const t=ALIAS[ba];if(sf==='白'||sf==='白色'){p=templateProducts.find(p=>p.name===t.replace(/碗$/,'白碗'));if(p)return p}else{p=templateProducts.find(p=>p.name===t.replace(/碗$/,'黑碗'));if(p)return p}}}}
@@ -2356,10 +2368,13 @@ function confirmAdd(){
 }
 // ===== 智能别名学习 =====
 let learnedAliases={},learnedExcludes={},deletedBuiltins=new Set();
+let learnedAliasSuppliers={}; // 别名 → 指定厂家 {name,supplier}，仅同名多厂家的产品会用到
 const BUILTIN_LEARNED={"H-1100碗":"H1250碗","HS5 1":"HS三格","HS5+1":"HS三格","500ml盒":"H500","6*197三層紙包":"6*197三層獨立紙包","20碗":"H30碗","1000碗":"興年華1000碗","12":"12*197四層獨立紙包","16":"H16碗","海翔H16":"H16碗","海翔16":"H16碗","海翔H16碗":"H16碗","1813":"28MM內格","MX700碗":"美星700碗","熱杯280g":"280 8安花紙杯","16安透明碗":"H16碗","黑色美式1000":"1000美黑","16透明":"H16碗","H12透明":"H12碗","H16白色.":"H16白碗","H30透明":"H30碗","Dg11.":"DG-11透","1-2安甘蔗蓋":"2安甘蔗杯蓋","H1250蓋":"H1250碗蓋","30安透明":"H30碗","熱杯250g":"250 8安花紙杯","30安蓋":"H24-30碗蓋","興1000透碗":"興年華1000碗","30-35紙碗蓋":"H24-30碗蓋","35紙碗":"35安紙碗","Y1200透碗":"Y1200碗","Y1350透碗":"Y1350碗","30安透明碗":"H30碗","30安白色碗":"H30白碗","1000方紙合":"1000紙盒","30透明":"H30碗","透明30碗":"H30碗","白色30":"H30白碗","淨12膠碗":"H12碗","H盖":"盒蓋","紙飯羹":"甘蔗中更","28mm內格":"28MM內格","80PP熱蓋":"H12-16碗蓋","1813 加厚黑色":"28MM內格","加厚黑色":"28MM內格","9 甘蔗圓碟":"9\"甘蔗圓碟","甘蔗圓碟":"9\"甘蔗圓碟","16黑碗":"H16碗","7 *197 獨立包裝":"7*197四層獨立紙包","12安白紙碗":"12安紙碗","甘蔗1000盒":"1000甘蔗盒","甘蔗1000盖":"1000甘蔗盒盖","銀僑1200美透":"X11","12安透明碗":"H12碗","H1250白色":"H1250白碗","銀橋1200美透":"X11","H-1250 蓋":"H1250碗蓋","H-1250":"H1250碗蓋","2000魚盒黑":"Hs2000美式","興1250碗黑":"興明發1250黑碗","DG23透明":"DG一23","7 加厚甘蔗圓碟":"7\"甘蔗圓碟(加厚)","加厚甘蔗圓碟":"7\"甘蔗圓碟(加厚)","6*197三層散":"6*197 三層紙飲管","甘蔗碟9寸圓碟":"9\"甘蔗圓碟","HS1500透碗":"HS1500碗","HS1000透明美式":"HS1000+","HS1000透方盒":"HS1000方盒","HS142高蓋":"HS142蓋","1250內隔":"HS內格","6*197三散":"6*197 三層紙飲管","7*197四散":"7*197 四層紙飲管","12*197四散":"12*197 四層紙飲管","長方750紙盒":"750紙盒","850蓋":"850蓋","16安碗":"H16碗","16安蓋":"H12-16碗蓋","1300沙拉碗":"35安紙碗","1300紙碗":"35安紙碗","PP熱蓋":"H12-16碗蓋","T38":"28MM內格","T34":"28MM內格","T36":"28MM內格","T316":"28MM內格","茂盈":"1000美黑","WDK650":"1000美黑","茂盈WDK650":"1000美黑","24透":"H24碗","HS1350黑碗":"Y1350碗","HS700黑碗":"Y1200碗","LS55":"LS一55","LS55(150装箱)":"LS一55","容750":"容海500","容1000":"興明發500底","DG11透明":"DG-11透","DG11":"DG-11透","银桥X11":"X11","7加厚甘蔗圓碟":"7\"甘蔗圓碟(加厚)","HS內格":"HS內格","美黑1000":"1000美黑","美黑":"1000美黑","H1250透明":"H1250碗","白色LS-55":"LS一55白","白色LS-":"LS一55白","30紙碗":"30安紙碗","9吋甘蔗紙碟":"9\"甘蔗圓碟","白色8安 杯":"8安白杯","白色8安":"8安白杯","650盒":"H650","白色H-1500碗":"H1250白碗","白色H1500碗":"H1250白碗","白色H1500":"H1250白碗","白色H1250碗":"H1250白碗","白色H-1250碗":"H1250白碗","白色H1250":"H1250白碗","白色H-1100碗":"H1250白碗","白色H1100碗":"H1250白碗","H1100白色碗":"H1250白碗","H1100白色":"H1250白碗","HS2000魚盒黑":"Hs2000美式","銀橋1200美式透明合":"1000美透","7安杯":"8安白杯","30安白碗":"H30白碗","12胶碗透":"H12碗","興年华1000碗":"興年華1000碗","DG11.":"DG-11透","DG":"DG-11透","12透明":"H12碗","12白色":"H12白碗","2015B.白加厚":"28MM內格","2安甘蔗蓋":"2安甘蔗杯蓋","LS 2A":"LS一2A","LS":"LS一2A","2A":"LS一2A","HS500透碗":"HS500圓盒","28mm内格":"28MM內格","H16胶碗":"H16碗","16pp碗":"H16碗","24pp碗":"H24碗","30pp碗":"H30碗","12-16 盖":"H12-16碗蓋","12-16":"H12-16碗蓋","12-16pp碗盖":"H12-16碗蓋","24-30pp碗盖":"H24-30碗蓋","4.0內格":"28MM內格","白色12 紙碗":"12安紙碗","白色12":"12安紙碗","紙碗":"12安紙碗","Dg11":"DG-11透","Dg":"DG-11透","PS熱蓋":"H12-16碗蓋","韓盛1.5安醬杯":"HS2安杯","12-16安蓋":"H12-16碗蓋","24安透明碗":"H24碗","興1250ml透碗":"興明發1250碗","HS2000ml美透":"Hs2000美式","HS2000黑碗":"Hs2000美式","銀橋美式750方合黑色":"1000美透","韓盛3000透明圓盆":"HS1750碗","LS1000":"1000美黑","LS蓋":"H12-16碗蓋","H1500黑碗":"H1250碗","HS3000ml黑色碗":"HS1750碗","16胶碗":"H16碗","HS700黑碗底":"Y1200碗","中央化學115盒":"中央CTP115盒","中央化學115蓋":"中央CTP115蓋","紙盒膠蓋":"H12-16碗蓋","500-1000ml 蓋":"H24-30碗蓋","500-1000ml":"H24-30碗蓋","250热杯":"250 8安花紙杯","12啡紙碗":"12安紙碗","12 X197四紙包":"12*197四層獨立紙包","1813黑碟加厚100裝":"28MM內格"},BUILTIN_EXCLUDES=["白色大圓碟 2000裝","中一深","HKT8","HK 11"];
 const BUILTIN_HASH=(()=>{const s=JSON.stringify(BUILTIN_LEARNED)+JSON.stringify(BUILTIN_EXCLUDES);let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return h.toString(36);})();
 function loadLearnedAliases(){
   learnedAliases={};
+  // 别名 → 指定厂家的记录（用户点选过的厂家，不随内置词典更新而清空）
+  try{learnedAliasSuppliers=JSON.parse(localStorage.getItem('v63aliasSuppliers')||'{}')||{};}catch(e){learnedAliasSuppliers={};}
   // 检查BUILTIN是否已更新（嵌入新版本后），如是则清空旧localStorage避免冲突
   const storedHash=localStorage.getItem('v63hash');
   if(storedHash!==BUILTIN_HASH){
@@ -2401,7 +2416,7 @@ function loadLearnedAliases(){
   }
   refreshLearnUI();
 }
-let pendingLearnName='';
+let pendingLearnName='',pendingLearnProd=null,learnListItems=[];
 function learnAlias(rawName){
   pendingLearnName=rawName;
   document.getElementById('learnModal').style.display='flex';
@@ -2413,36 +2428,60 @@ function learnAlias(rawName){
 function filterLearnList(){
   const q=document.getElementById('learnInput').value.trim().toLowerCase();
   const dd=document.getElementById('learnDropdown');
+  pendingLearnProd=null; // 输入框内容一变，之前点选的那一行作废
   const items=templateProducts.filter(p=>!q||p.name.toLowerCase().includes(q));
   if(items.length===0){dd.style.display='none';return;}
   dd.style.display='block';
-  dd.innerHTML=items.slice(0,30).map(p=>`<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent" onmousedown="selectLearnItem('${escHtml(p.name)}')">${escHtml(p.name)}</div>`).join('');
+  learnListItems=items.slice(0,30);
+  // 每行右侧显示厂家：同名产品有多个厂家时才能分清点的是哪家
+  dd.innerHTML=learnListItems.map((p,i)=>`<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #ffe7dd;-webkit-tap-highlight-color:transparent;display:flex;align-items:baseline;justify-content:space-between;gap:8px" onmousedown="selectLearnItem(${i})"><span>${escHtml(p.name)}</span><span style="font-size:11px;color:var(--text-tri);text-align:right;flex-shrink:1;min-width:0">${escHtml(String(p.supplier||'').trim())}</span></div>`).join('');
 }
-function selectLearnItem(name){
-  document.getElementById('learnInput').value=name;
+function selectLearnItem(x){
+  // 下拉里点的是第几行（同名产品按行区分厂家）；旧写法传产品名时取首个同名产品
+  const p=typeof x==='number'?learnListItems[x]:templateProducts.find(t=>t.name===x);
+  if(!p)return;
+  pendingLearnProd=p;
+  document.getElementById('learnInput').value=p.name;
   document.getElementById('learnDropdown').style.display='none';
   confirmLearn();
 }
 function confirmLearn(){
   const templateName=document.getElementById('learnInput').value.trim();
   if(!templateName){alert('请选择模板产品');return;}
-  const prod=templateProducts.find(p=>p.name===templateName);
+  // 下拉里点选的那一行优先（同名产品按点选的厂家）；直接输入产品名回车则取首个同名产品
+  const picked=(pendingLearnProd&&pendingLearnProd.name===templateName)?pendingLearnProd:null;
+  pendingLearnProd=null;
+  let prod=picked||templateProducts.find(p=>p.name===templateName);
   if(!prod){alert(`模板中找不到: ${templateName}`);return;}
+  // 业务规则固定厂家的产品（SUPPLIER_FORCE）不随点选变化
+  let forcedNote='';
+  const forced=SUPPLIER_FORCE[prod.name];
+  if(forced&&prod.supplier!==forced){
+    prod=templateProducts.find(p=>p.name===prod.name&&p.supplier===forced)||prod;
+    forcedNote=`\n（"${prod.name}" 固定按 ${forced} 报关）`;
+  }
+  // 同名多厂家的产品：记下这次选的厂家，下次按这家匹配；只有一个厂家的产品不留记录
+  const shared=templateProducts.some(p=>p.name===prod.name&&p.supplier!==prod.supplier);
+  const setAlias=function(k){
+    learnedAliases[k]=prod.name;
+    if(shared)learnedAliasSuppliers[k]={name:prod.name,supplier:prod.supplier};
+    else delete learnedAliasSuppliers[k];
+  };
   // 保存别名：同时存原始行和parseLine解析后的纯产品名
-  learnedAliases[pendingLearnName]=templateName;
+  setAlias(pendingLearnName);
   deletedBuiltins.delete(pendingLearnName); // 重新学习→取消删除标记
   // 尝试用parseLine提取纯产品名，也存一份
   const parsed=parseLine(pendingLearnName);
   if(parsed&&parsed.name&&parsed.name!==pendingLearnName){
-    learnedAliases[parsed.name]=templateName;
+    setAlias(parsed.name);
   }
   // 也存各空格分词（跳过通用颜色/属性词——学习"韓盛1020 透明"不应生成裸"透明"别名）
   const LEARN_STOPWORDS=['透明','白色','黑色','加厚'];
   for(const w of pendingLearnName.split(/\s+/)){
-    if(w.length>=2&&w!==pendingLearnName&&!LEARN_STOPWORDS.includes(w))learnedAliases[w]=templateName;
+    if(w.length>=2&&w!==pendingLearnName&&!LEARN_STOPWORDS.includes(w))setAlias(w);
   }
   saveLearnedAliases();
-  alert(`已学习: "${pendingLearnName}" → "${templateName}"\n下次自动识别`);
+  alert(`已学习: "${pendingLearnName}" → "${prod.name}"${shared?`（${String(prod.supplier).trim()}）`:''}${forcedNote}\n下次自动识别`);
   closeLearn();
   const text=document.getElementById('inputText').value.trim();
   if(text){doClean(text);}
@@ -2480,7 +2519,10 @@ function refreshLearnUI(){
   let h='';
   for(const [k,v] of Object.entries(learnedAliases)){
     const ks=escHtml(k),vs=escHtml(v);
-    h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(56,189,248,.08);border-radius:6px;font-size:12px"><span>${ks} → <b>${vs}</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="${ks}">×</span></div>`;
+    // 指定了厂家的别名（同名多厂家产品）把厂家一并显示
+    const pin=learnedAliasSuppliers[k];
+    const ps=(pin&&pin.name===v&&pin.supplier)?`（${escHtml(String(pin.supplier).trim())}）`:'';
+    h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:3px 0;background:rgba(56,189,248,.08);border-radius:6px;font-size:12px"><span>${ks} → <b>${vs}${ps}</b></span><span style="cursor:pointer;color:var(--rose);font-weight:700;padding:0 6px;font-size:14px" data-key="${ks}">×</span></div>`;
   }
   for(const e of learnedExcludes){
     const es=escHtml(e);
@@ -2488,7 +2530,7 @@ function refreshLearnUI(){
   }
   list.innerHTML=h||'暂无';
   list.querySelectorAll('[data-key]').forEach(el=>{
-    el.onclick=function(e){e.stopPropagation();const k=this.dataset.key;const v=learnedAliases[k];delete learnedAliases[k];for(const w of k.split(/\s+/)){if(w.length>=2&&learnedAliases[w]===v)delete learnedAliases[w];}deletedBuiltins.add(k);saveLearnedAliases();refreshLearnUI();};
+    el.onclick=function(e){e.stopPropagation();const k=this.dataset.key;const v=learnedAliases[k];delete learnedAliases[k];delete learnedAliasSuppliers[k];for(const w of k.split(/\s+/)){if(w.length>=2&&learnedAliases[w]===v){delete learnedAliases[w];delete learnedAliasSuppliers[w];}}deletedBuiltins.add(k);saveLearnedAliases();refreshLearnUI();};
   });
   list.querySelectorAll('[data-exkey]').forEach(el=>{
     el.onclick=function(e){e.stopPropagation();learnedExcludes=learnedExcludes.filter(x=>x!==this.dataset.exkey);saveLearnedAliases();};
@@ -2498,13 +2540,13 @@ function clearLearned(){
   if(!confirm('⚠️ 确定清空所有别名和不报关标记？此操作不可恢复！'))return;
   const check=prompt('请输入 DELETE 确认清空','');
   if(check!=='DELETE'){alert('已取消');return;}
-  learnedAliases={};learnedExcludes=[];deletedBuiltins=new Set();
+  learnedAliases={};learnedExcludes=[];deletedBuiltins=new Set();learnedAliasSuppliers={};
   if(Object.keys(BUILTIN_LEARNED).length>0)Object.assign(learnedAliases,BUILTIN_LEARNED);
   if(BUILTIN_EXCLUDES.length>0)learnedExcludes=[...BUILTIN_EXCLUDES];
   saveLearnedAliases();refreshLearnUI();
 }
 function exportLearned(){
-  const json=JSON.stringify({aliases:learnedAliases,excludes:learnedExcludes},null,2);
+  const json=JSON.stringify({aliases:learnedAliases,excludes:learnedExcludes,aliasSuppliers:learnedAliasSuppliers},null,2);
   const blob=new Blob([json],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='报关别名_'+(new Date().toISOString().slice(0,10))+'.json';
@@ -2519,6 +2561,7 @@ function importLearned(e){
       // 已删除的条目(deletedBuiltins)不复活
       const incoming=d.aliases||d;
       for(const [k,v] of Object.entries(incoming)){if(!deletedBuiltins.has(k))learnedAliases[k]=v;}
+      if(d.aliasSuppliers){for(const k in d.aliasSuppliers){if(!deletedBuiltins.has(k))learnedAliasSuppliers[k]=d.aliasSuppliers[k];}}
       if(d.excludes){for(const x of d.excludes)if(!learnedExcludes.includes(x))learnedExcludes.push(x);}
       saveLearnedAliases();refreshLearnUI();
       alert(`已导入 ${Object.keys(learnedAliases).length} 别名 + ${learnedExcludes.length} 不报关`);
@@ -2535,6 +2578,7 @@ function saveLearnedAliases(){
     localStorage.setItem('v63learned',JSON.stringify(userOnly));
     localStorage.setItem('v63exclude',JSON.stringify(learnedExcludes));
     localStorage.setItem('v63deleted',JSON.stringify([...deletedBuiltins]));
+    localStorage.setItem('v63aliasSuppliers',JSON.stringify(learnedAliasSuppliers));
     refreshLearnUI();
   }catch(e){alert('别名保存失败: '+e.message);}
 }
@@ -3508,6 +3552,7 @@ function nextOrder(){
 		    // 已删除的条目(deletedBuiltins)不复活
 		    const incoming=d.aliases||d;
 		    for(const k in incoming){if(!deletedBuiltins.has(k))learnedAliases[k]=incoming[k];}
+		    if(d.aliasSuppliers){for(const k in d.aliasSuppliers){if(!deletedBuiltins.has(k))learnedAliasSuppliers[k]=d.aliasSuppliers[k];}}
 		    if(d.excludes){for(var i=0;i<d.excludes.length;i++){if(!learnedExcludes.includes(d.excludes[i]))learnedExcludes.push(d.excludes[i]);}}
 		    saveLearnedAliases();refreshLearnUI();
 		    console.log('已加载服务器别名规则');
