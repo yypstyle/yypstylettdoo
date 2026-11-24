@@ -3046,12 +3046,23 @@ function getGroupIndexMap(){
   return map;
 }
 function calcCheckBaseline(){
-  const rows=matchedItems.map(function(m,i){
+  // 与报关明细表/工作台同口径：同名同厂家的装车单行合并为一行（Excel 导出本就合并，
+  // 工作台毛重校准也在合并行上选候选——查车若按拆分行选，J 值排序会与工作台不一致）
+  const merged=new Map(),rows=[];
+  for(let i=0;i<matchedItems.length;i++){
+    const m=matchedItems[i];
     const nw=m.product.netWeight||0;
-    const gross=nw*m.qty+m.qty/2;
-    return {idx:i,name:m.product.name,supplier:m.product.supplier,variety:m.product.variety,qty:m.qty,
-            net:nw*m.qty,gross:gross,adj:0,finalGross:gross,row:m.product.row};
-  });
+    const key=m.product.name+'|'+m.product.supplier;
+    let r=merged.get(key);
+    if(!r){
+      r={idx:i,name:m.product.name,supplier:m.product.supplier,variety:m.product.variety,
+         qty:0,net:0,gross:0,adj:0,finalGross:0,row:m.product.row,price:m.product.price||0,amount:0};
+      merged.set(key,r);rows.push(r);
+    }
+    r.qty+=m.qty;r.net+=nw*m.qty;r.gross+=nw*m.qty+m.qty/2;
+    r.amount=(r.price+1)*r.qty;
+    r.finalGross=r.gross;
+  }
   const total=rows.reduce(function(s,r){return s+r.gross;},0);
   return {rows:rows,total:total};
 }
@@ -3063,15 +3074,37 @@ function solveCheckAdjust(target){
     return {ok:true,adjust:false,rows:base.rows,before:base.total,after:base.total,diff:0,applied:false,adjusted:[],msg:'未填目标毛重，按当前数据出图'};
   }
   const diff=round1(tn-base.total);
-  const r1={ok:true,adjust:true,rows:base.rows,before:base.total,after:base.total+ (Math.abs(diff)<=0.5?0:0),diff:diff,applied:false,adjusted:[]};
+  const r1={ok:true,adjust:true,rows:base.rows,before:base.total,after:base.total,diff:diff,applied:false,adjusted:[]};
   if(Math.abs(diff)<=0.5){
     r1.msg='差额 '+diff.toFixed(1)+' kg 在 ±0.5 容差内，无需校准';
     return r1;
   }
-  const cands=base.rows.filter(function(r){return CC_XMF(r.supplier);})
-    .sort(function(a,b){if(b.gross!==a.gross)return b.gross-a.gross;return a.row-b.row;});
+  const byGross=function(a,b){if(b.gross!==a.gross)return b.gross-a.gross;return a.row-b.row;};
+  let cands=base.rows.filter(function(r){return CC_XMF(r.supplier);}).sort(byGross);
+  let tag='兴明发';
+  // 工作台同款兜底（2026-11-04 业主规则）：无兴明发产品时用韩盛产品承载毛重修正
   if(cands.length===0){
-    r1.msg='未找到兴明发产品，无法自动校准毛重';
+    cands=base.rows.filter(function(r){
+      const s=String(r.supplier||'');
+      const b=(typeof getBrand==='function')?(getBrand(r.name,r.supplier,r.row)||''):'';
+      return s.indexOf('韓盛')>=0||s.indexOf('韩盛')>=0||b.indexOf('韓盛')>=0||b.indexOf('韩盛')>=0;
+    }).sort(byGross);
+    if(cands.length)tag='韩盛';
+  }
+  if(cands.length===0){
+    // 工作台同款兜底：无兴明发且无韩盛时，≤5kg 的皮重尾差自动修正到最后一个产品行
+    if(Math.abs(diff)<=5){
+      let fix=null;
+      for(const r of base.rows){if(!fix||r.row>fix.row)fix=r;}
+      if(fix){
+        fix.adj=round1(diff);fix.finalGross=fix.gross+fix.adj;
+        r1.applied=true;r1.after=base.total+fix.adj;
+        r1.adjusted=[{name:fix.name,adj:fix.adj}];
+        r1.msg='未找到兴明发/韩盛产品，毛重尾差 '+diff.toFixed(1)+'kg 已按皮重尾差修正到 '+fix.name;
+        return r1;
+      }
+    }
+    r1.msg='未找到兴明发/韩盛产品，差额 '+diff.toFixed(1)+'kg 超过 5kg 自动修正上限，须人工核对（精确差额 '+diff.toFixed(1)+'kg）';
     return r1;
   }
   let adj1=0,adj2=0,useN=0;
@@ -3091,7 +3124,7 @@ function solveCheckAdjust(target){
 async function openCheckCar(){
   if(!matchedItems.length){alert('没有匹配数据，先完成匹配');return;}
   const base=calcCheckBaseline();
-  document.getElementById('ccInfo').innerHTML='当前整车总毛重: <b>'+base.total.toFixed(2)+' kg</b>（'+matchedItems.length+' 个产品）';
+  document.getElementById('ccInfo').innerHTML='当前整车总毛重: <b>'+base.total.toFixed(2)+' kg</b>（'+base.rows.length+' 个产品）';
   document.getElementById('ccTargetGross').value='';
   document.getElementById('ccSuggest').innerHTML='';
   document.getElementById('btnGenImg').disabled=true;
@@ -3134,7 +3167,7 @@ function drawCheckCarTable(plan){
     const m=matchedItems[r.idx];
     const grp=m?(gmap.get(m)||0):0;
     return {seq:grp,name:r.name,variety:r.variety,qty:r.qty,net:r.net,gross:r.finalGross,
-            amount:m?(((m.product.price||0)+1)*m.qty):0};
+            amount:(typeof r.amount==='number')?r.amount:(m?(((m.product.price||0)+1)*m.qty):0)};
   });
   const cols=[
     {k:'seq',t:'序号',w:70,align:'center'},
