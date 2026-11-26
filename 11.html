@@ -1077,7 +1077,7 @@ textarea::placeholder,input::placeholder{color:#a59098!important;font-style:norm
 	      <span style="white-space:nowrap;font-size:13px;color:var(--text-sec)">kg</span>
 	    </div>
 	    <div id="wDualRows" style="display:none">
-	      <div style="font-size:12px;color:var(--text-sec);margin:8px 0 2px;font-weight:600">兴明发 <span id="curXmfTxt" style="font-weight:400;color:var(--text-tri)"></span></div>
+	      <div style="font-size:12px;color:var(--text-sec);margin:8px 0 2px;font-weight:600">兴明发（可留空=本次不调） <span id="curXmfTxt" style="font-weight:400;color:var(--text-tri)"></span></div>
 	      <div style="display:flex;gap:8px;align-items:center;margin:4px 0">
 	        <select id="dirXmf" onchange="saveWeightPrefs()" class="w-sel">
 	          <option value="1">➕ 增加</option>
@@ -1086,7 +1086,7 @@ textarea::placeholder,input::placeholder{color:#a59098!important;font-style:norm
 	        <input type="number" id="valXmf" step="0.1" onkeydown="if(event.key==='Enter')calcWeight()" class="w-inp">
 	        <span style="white-space:nowrap;font-size:13px;color:var(--text-sec)">kg</span>
 	      </div>
-	      <div style="font-size:12px;color:var(--text-sec);margin:10px 0 2px;font-weight:600">海翔 <span id="curHxTxt" style="font-weight:400;color:var(--text-tri)"></span></div>
+	      <div style="font-size:12px;color:var(--text-sec);margin:10px 0 2px;font-weight:600">海翔（可留空=本次不调） <span id="curHxTxt" style="font-weight:400;color:var(--text-tri)"></span></div>
 	      <div style="display:flex;gap:8px;align-items:center;margin:4px 0">
 	        <select id="dirHx" onchange="saveWeightPrefs()" class="w-sel">
 	          <option value="1">➕ 增加</option>
@@ -2817,15 +2817,14 @@ function calcWeight(){
   }else{
     const vx=parseFloat(document.getElementById('valXmf').value);
     const vh=parseFloat(document.getElementById('valHx').value);
+    // 两池对称可选：留空/0 = 本次不调该池；两个都空才拦
     if(mode==='delta'){
-      if(!vx||vx<=0){alert('请输入兴明发增减数值');return;}
-      diffXmf=(parseInt(document.getElementById('dirXmf').value)||1)*vx;
-      // 海翔留空/0 = 本次不调海翔
+      if((!vx||vx<=0)&&(!vh||vh<=0)){alert('请至少输入兴明发或海翔其一的增减数值');return;}
+      diffXmf=vx>0?(parseInt(document.getElementById('dirXmf').value)||1)*vx:0;
       diffHx=vh>0?(parseInt(document.getElementById('dirHx').value)||1)*vh:0;
     }else{
-      if(!vx||vx<=0){alert('请输入兴明发总净重');return;}
-      diffXmf=vx-curXmf;
-      // 海翔留空/0 = 本次不调海翔
+      if((!vx||vx<=0)&&(!vh||vh<=0)){alert('请至少输入兴明发或海翔其一的总净重');return;}
+      diffXmf=vx>0?vx-curXmf:0;
       diffHx=vh>0?vh-curHx:0;
     }
   }
@@ -2849,7 +2848,9 @@ function calcWeight(){
   let html=`<div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px;margin:8px 0;font-size:12px">`;
   html+=`当前总净重: <b>${curAll.toFixed(1)}</b> kg（兴明发 ${curXmf.toFixed(1)} / 海翔 ${curHx.toFixed(1)}）<br>`;
   if(inclHX){
-    html+=`兴明发: <b style="color:${diffXmf>=0?'var(--green)':'var(--rose)'}">${diffXmf>0?'增加':'减少'} ${Math.abs(diffXmf).toFixed(1)}</b> kg ｜ 海翔: <b style="color:${diffHx>=0?'var(--green)':'var(--rose)'}">${diffHx>0?'增加':'减少'} ${Math.abs(diffHx).toFixed(1)}</b> kg<br>`;
+    const fx=diffXmf===0?'<b>不调整</b>':`<b style="color:${diffXmf>=0?'var(--green)':'var(--rose)'}">${diffXmf>0?'增加':'减少'} ${Math.abs(diffXmf).toFixed(1)}</b> kg`;
+    const fh=diffHx===0?'<b>不调整</b>':`<b style="color:${diffHx>=0?'var(--green)':'var(--rose)'}">${diffHx>0?'增加':'减少'} ${Math.abs(diffHx).toFixed(1)}</b> kg`;
+    html+=`兴明发: ${fx} ｜ 海翔: ${fh}<br>`;
   }else{
     html+=`${mode==='delta'?`${diffXmf>0?'增加':'减少'} <b>${Math.abs(diffXmf).toFixed(1)}</b> kg`:`目标总净重: <b>${valSingle.toFixed(1)}</b> kg`}<br>`;
   }
